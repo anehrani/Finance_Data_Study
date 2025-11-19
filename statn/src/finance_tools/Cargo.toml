@@ -1,0 +1,11 @@
+[package]
+name = "finance_tools"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "finance_tools"
+path = "lib.rs"
+
+[dependencies]
+rand = "0.8"

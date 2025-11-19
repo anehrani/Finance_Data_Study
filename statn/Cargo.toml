@@ -1,0 +1,50 @@
+[workspace]
+members = [
+    "src/matlib",
+    "src/stats",
+    "src/finance_tools",
+    "src/gap_analysis"
+]
+
+[package]
+name = "statn"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+rand = "0.8"
+
+# [[bin]]
+# name = "boot"
+# path = "src/boot/main.rs"
+
+# [[bin]]
+# name = "cscv"
+# path = "src/cscv/main.rs"
+
+# [[bin]]
+# name = "dev_ma"
+# path = "src/dev_ma/main.rs"
+
+[[bin]]
+name = "gap_analysis"
+path = "src/gap_analysis/main.rs"
+
+# [[bin]]
+# name = "matlib"
+# path = "src/matlib/main.rs"
+
+# [[bin]]
+# name = "stats"
+# path = "src/stats/main.rs"
+
+# [[bin]]
+# name = "test_utils"
+# path = "src/test_utils/main.rs"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+rand = "0.8"

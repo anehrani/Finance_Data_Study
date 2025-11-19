@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "price_predictor"
+version = "1.0"
+description = "A Python package for price prediction"
+authors = ["Ali Nehrani <ali.nehrani@email.com>"]
+
+
+packages = [
+    { include = "src/trd_v1", from = "." }
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8" 
+numpy = "1.26.3"
+ccxt = "4.2.77"
+#lol = { path = "libs/lol/", develop = true, extras = ['my_extra'] }
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

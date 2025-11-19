@@ -1,0 +1,11 @@
+[package]
+name = "matlib"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "matlib"
+path = "lib.rs"
+
+[dependencies]
+rand = "0.8"
