@@ -9,3 +9,5 @@ path = "lib.rs"
 
 [dependencies]
 rand = "0.8"
+matlib = { path = "../matlib" }
+finance_tools = { path = "../finance_tools" }

@@ -1,12 +1,13 @@
 mod data;
-mod indicators;
 mod analysis;
 
 use matlib::qsortd;
 use std::process;
 
 use data::read_market_data;
-use indicators::{compute_trend, compute_volatility, find_quantile, find_min_max};
+use indicators::trend::compute_trend;
+use indicators::volatility::compute_volatility;
+use stats::{find_quantile, find_min_max};
 use analysis::{initialize_gap_sizes, gap_analyze, print_gap_analysis};
 
 /*

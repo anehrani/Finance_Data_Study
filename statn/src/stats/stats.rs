@@ -802,27 +802,49 @@ pub fn uncertainty_reduction(data: &[Vec<i32>]) -> (f64, f64, f64) {
         }
     }
 
-    let mut u_joint = 0.0;
-    for row in data.iter() {
-        for &val in row.iter() {
+    let mut u_sym = 0.0;
+    for (i, row) in data.iter().enumerate() {
+        for (j, &val) in row.iter().enumerate() {
             if val > 0 {
                 let p = (val as f64) / (total as f64);
-                u_joint -= p * p.ln();
+                u_sym -= p * p.ln();
             }
         }
     }
 
-    let numer = u_row + u_col - u_joint;
+    let u_row_given_col = u_sym - u_col;
+    let u_col_given_row = u_sym - u_row;
 
-    let row_dep = if u_row > 0.0 { numer / u_row } else { 0.0 };
-    let col_dep = if u_col > 0.0 { numer / u_col } else { 0.0 };
-    let sym = if u_row + u_col > 0.0 {
-        2.0 * numer / (u_row + u_col)
-    } else {
-        0.0
-    };
+    let u_row_red = (u_row - u_row_given_col) / (u_row + 1e-60);
+    let u_col_red = (u_col - u_col_given_row) / (u_col + 1e-60);
+    let u_sym_red = 2.0 * (u_row + u_col - u_sym) / (u_row + u_col + 1e-60);
 
-    (row_dep, col_dep, sym)
+    (u_row_red, u_col_red, u_sym_red)
+}
+
+pub fn find_quantile(sorted_data: &[f64], fractile: f64) -> f64 {
+    let n = sorted_data.len();
+    let mut k = ((fractile * (n as f64 + 1.0)) as usize).saturating_sub(1);
+    if k >= n {
+        k = n - 1;
+    }
+    sorted_data[k]
+}
+
+pub fn find_min_max(data: &[f64]) -> (f64, f64) {
+    let mut min_val = f64::INFINITY;
+    let mut max_val = f64::NEG_INFINITY;
+
+    for &val in data {
+        if val < min_val {
+            min_val = val;
+        }
+        if val > max_val {
+            max_val = val;
+        }
+    }
+
+    (min_val, max_val)
 }
 
 // ============================================================================
