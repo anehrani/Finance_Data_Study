@@ -3,8 +3,8 @@ const NGAPS: usize = 11;
 pub fn initialize_gap_sizes() -> Vec<usize> {
     let mut gap_size = vec![0; NGAPS - 1];
     let mut k = 1;
-    for i in 0..NGAPS - 1 {
-        gap_size[i] = k;
+    for gap in gap_size.iter_mut().take(NGAPS - 1) {
+        *gap = k;
         k *= 2;
     }
     gap_size
@@ -19,8 +19,10 @@ pub fn gap_analyze(x: &[f64], thresh: f64, gap_size: &[usize]) -> Vec<usize> {
     for i in 1..=x.len() {
         let new_above_below = if i == x.len() {
             1 - above_below
+        } else if x[i] >= thresh {
+            1
         } else {
-            if x[i] >= thresh { 1 } else { 0 }
+            0
         };
 
         if new_above_below == above_below {

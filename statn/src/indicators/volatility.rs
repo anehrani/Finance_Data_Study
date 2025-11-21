@@ -12,9 +12,9 @@ pub fn compute_volatility(
     let nind = nprices - full_lookback + 1;
     let mut volatility = vec![0.0; nind];
 
-    for i in 0..nind {
+    for (i, vlt) in volatility.iter_mut().enumerate().take(nind) {
         let k = full_lookback - 1 + i;
-        volatility[i] = match version {
+        *vlt = match version {
             0 => atr(lookback, highs, lows, closes, k),
             1 => {
                 atr(lookback, highs, lows, closes, k)

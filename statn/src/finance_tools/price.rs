@@ -31,3 +31,4 @@ pub fn atr(lookback: usize, high: &[f64], low: &[f64], close: &[f64], index: usi
 
     sum / lookback as f64
 }
+

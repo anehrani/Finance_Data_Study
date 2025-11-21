@@ -472,9 +472,8 @@ pub fn u_test(x1: &[f64], x2: &[f64]) -> (f64, f64) {
 
     let mut combined: Vec<(f64, usize)> = x1
         .iter()
-        .enumerate()
-        .map(|(i, &v)| (v, 0))
-        .chain(x2.iter().enumerate().map(|(i, &v)| (v, 1)))
+        .map(|&v| (v, 0))
+        .chain(x2.iter().map(|&v| (v, 1)))
         .collect();
 
     combined.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
@@ -712,7 +711,7 @@ pub fn nominal_lambda(data: &[Vec<i32>]) -> (f64, f64, f64) {
     let mut max_row_total = 0;
     let mut total = 0;
 
-    for (i, row) in data.iter().enumerate() {
+    for row in data.iter() {
         let mut row_cell_max = 0;
         let mut row_total = 0;
         for &val in row.iter() {
@@ -803,8 +802,8 @@ pub fn uncertainty_reduction(data: &[Vec<i32>]) -> (f64, f64, f64) {
     }
 
     let mut u_sym = 0.0;
-    for (i, row) in data.iter().enumerate() {
-        for (j, &val) in row.iter().enumerate() {
+    for row in data.iter() {
+        for &val in row.iter() {
             if val > 0 {
                 let p = (val as f64) / (total as f64);
                 u_sym -= p * p.ln();
@@ -1107,6 +1106,43 @@ impl OnlineStats {
         result
     }
 }
+
+
+
+/*
+Compute relative entropy
+*/
+
+pub fn entropy(data: &[f64], nbins: usize) -> f64 {
+    let n = data.len();
+    if n == 0 || nbins < 2 {
+        return 0.0;
+    }
+
+    let minval = data.iter().cloned().fold(f64::INFINITY, f64::min);
+    let maxval = data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+
+    let factor = (nbins as f64 - 1e-10) / (maxval - minval + 1e-60);
+
+    let mut count = vec![0; nbins];
+
+    for &x in data {
+        let k = ((factor * (x - minval)) as usize).min(nbins - 1);
+        count[k] += 1;
+    }
+
+    let mut sum = 0.0;
+    for &c in &count {
+        if c > 0 {
+            let p = c as f64 / n as f64;
+            sum += p * p.ln();
+        }
+    }
+
+    -sum / (nbins as f64).ln()
+}
+
+
 
 #[cfg(test)]
 mod tests {

@@ -102,7 +102,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
 
     // Perform SVD and back-substitution to get coefficients
     let mut coefs = vec![0.0; ncoefs];
-    let mut svd = svd_solve(&a_matrix, &b_vector, nc_kept, ncoefs)?;
+    let svd = svd_solve(&a_matrix, &b_vector, nc_kept, ncoefs)?;
     coefs.copy_from_slice(&svd);
 
     // Print coefficients
@@ -183,7 +183,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
     print_matrix(&mut fp, &hessian, nparams)?;
 
     // Compute eigenstructure
-    let (mut evals, mut evect) = eigen_decomposition(&hessian, nparams)?;
+    let (evals, evect) = eigen_decomposition(&hessian, nparams)?;
 
     // Print eigenvalues and eigenvectors
     writeln!(

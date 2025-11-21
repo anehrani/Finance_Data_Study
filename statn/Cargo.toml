@@ -1,10 +1,11 @@
 [workspace]
 members = [
-    "src/matlib",
-    "src/stats",
+    "src/core/matlib",
+    "src/core/stats",
     "src/finance_tools",
     "src/gap_analysis",
-    "src/indicators"
+    "src/indicators",
+    "src/entropy"
 ]
 
 [package]
@@ -16,8 +17,8 @@ edition = "2024"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
 rand = "0.8"
-matlib = { path = "src/matlib" }
-stats = { path = "src/stats" }
+matlib = { path = "src/core/matlib" }
+stats = { path = "src/core/stats" }
 indicators = { path = "src/indicators" }
 finance_tools = { path = "src/finance_tools" }
 
@@ -37,17 +38,9 @@ finance_tools = { path = "src/finance_tools" }
 name = "gap_analysis"
 path = "src/gap_analysis/main.rs"
 
-# [[bin]]
-# name = "matlib"
-# path = "src/matlib/main.rs"
-
-# [[bin]]
-# name = "stats"
-# path = "src/stats/main.rs"
-
-# [[bin]]
-# name = "test_utils"
-# path = "src/test_utils/main.rs"
+[[bin]]
+name = "entropy"
+path = "src/entropy/main.rs"
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }

@@ -1,10 +1,10 @@
 [package]
-name = "gap_analysis"
+name = "entropy"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "gap_analysis"
+name = "entropy"
 path = "main.rs"
 
 [dependencies]
@@ -13,3 +13,4 @@ matlib = { path = "../core/matlib" }
 stats = { path = "../core/stats" }
 finance_tools = { path = "../finance_tools" }
 indicators = { path = "../indicators" }
+io = { path = "../io" }

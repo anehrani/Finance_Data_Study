@@ -43,9 +43,9 @@ pub fn compute_trend(
     let nind = nprices - full_lookback + 1;
     let mut trend = vec![0.0; nind];
 
-    for i in 0..nind {
+    for (i, trd) in trend.iter_mut().enumerate().take(nind) {
         let k = full_lookback - 1 + i;
-        trend[i] = match version {
+        *trd = match version {
             0 => find_slope(lookback, closes, k),
             1 => find_slope(lookback, closes, k) - find_slope(lookback, closes, k - lookback),
             _ => find_slope(lookback, closes, k) - find_slope(full_lookback, closes, k),

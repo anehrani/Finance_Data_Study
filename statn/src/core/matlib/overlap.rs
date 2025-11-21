@@ -1,5 +1,3 @@
-use std::env;
-use std::io::{self, Read};
 
 const PI: f64 = std::f64::consts::PI;
 

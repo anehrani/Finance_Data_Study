@@ -4,7 +4,9 @@ use std::process;
 
 #[derive(Debug)]
 pub struct MarketData {
+    #[allow(dead_code)]
     pub dates: Vec<i32>,
+    #[allow(dead_code)]
     pub opens: Vec<f64>,
     pub highs: Vec<f64>,
     pub lows: Vec<f64>,
@@ -85,14 +87,17 @@ fn parse_line(line: &str, line_num: usize, filename: &str) -> (i32, f64, f64, f6
     let month = (full_date % 10000) / 100;
     let day = full_date % 100;
 
-    if month < 1 || month > 12 || day < 1 || day > 31 || year < 1800 || year > 2030 {
+    if !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || !(1800..=2030).contains(&year)
+    {
         eprintln!("ERROR... Invalid date {} in line {}", full_date, line_num);
         process::exit(1);
     }
 
     // Parse prices
     let parts: Vec<&str> = line[9..]
-        .split(|c| c == ' ' || c == '\t' || c == ',')
+        .split([' ', '\t', ','])
         .filter(|s| !s.is_empty())
         .collect();
 
