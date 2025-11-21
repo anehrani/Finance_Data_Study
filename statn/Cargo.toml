@@ -3,9 +3,10 @@ members = [
     "src/core/matlib",
     "src/core/stats",
     "src/finance_tools",
-    "src/gap_analysis",
     "src/indicators",
-    "src/entropy"
+    "gap_analysis",
+    "try_indicators",
+    "try_estimators"
 ]
 
 [package]
@@ -34,13 +35,7 @@ finance_tools = { path = "src/finance_tools" }
 # name = "dev_ma"
 # path = "src/dev_ma/main.rs"
 
-[[bin]]
-name = "gap_analysis"
-path = "src/gap_analysis/main.rs"
 
-[[bin]]
-name = "entropy"
-path = "src/entropy/main.rs"
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }

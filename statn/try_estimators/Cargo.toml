@@ -1,0 +1,16 @@
+[package]
+name = "try_estimators"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "try_estimators"
+path = "main.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+matlib = { path = "../src/core/matlib" }
+stats = { path = "../src/core/stats" }
+finance_tools = { path = "../src/finance_tools" }
+indicators = { path = "../src/indicators" }
+statn = { path = "../" }

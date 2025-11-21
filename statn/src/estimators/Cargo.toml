@@ -1,0 +1,12 @@
+[package]
+name = "estimators"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "estimators"
+path = "lib.rs"
+
+[dependencies]
+rand = "0.8"
+matlib = { path = "../core/matlib" }
