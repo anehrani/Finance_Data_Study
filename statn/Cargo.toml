@@ -6,7 +6,8 @@ members = [
     "src/indicators",
     "gap_analysis",
     "try_indicators",
-    "try_estimators"
+    "try_estimators",
+    "try_cd_model"
 ]
 
 [package]

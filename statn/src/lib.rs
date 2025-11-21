@@ -1,6 +1,7 @@
 pub mod core;
 pub mod io;
 pub mod estimators;
+pub mod models;
 // pub mod boot;
 // pub mod cscv;
 // pub mod dev_ma;

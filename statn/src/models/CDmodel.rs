@@ -187,7 +187,7 @@ impl CoordinateDescent {
 
         // Compute inner products if using covariance updates
         if self.covar_updates {
-            if let (Some(ref mut xinner), Some(ref mut yinner)) = (&mut self.xinner, &mut self.yinner) {
+            if let (Some(xinner), Some(yinner)) = (&mut self.xinner, &mut self.yinner) {
                 for ivar in 0..self.nvars {
                     // Compute XiY
                     let mut sum = 0.0;
