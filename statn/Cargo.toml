@@ -7,7 +7,7 @@ members = [
     "gap_analysis",
     "try_indicators",
     "try_estimators",
-    "try_cd_model"
+    "try_cd_ma"
 ]
 
 [package]

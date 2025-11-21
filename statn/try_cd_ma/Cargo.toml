@@ -1,10 +1,10 @@
 [package]
-name = "try_cd_model"
+name = "try_cd_ma"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "try_cd_model"
+name = "try_cd_ma"
 path = "main.rs"
 
 [dependencies]
