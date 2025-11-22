@@ -1,5 +1,5 @@
-pub mod Overlap;
-pub mod PARAMCOR;
-pub mod QSORTS;
-pub mod RANDS;
+pub mod overlap;
+pub mod paramcor;
+pub mod qsorts;
+pub mod rands;
 pub mod linalg;

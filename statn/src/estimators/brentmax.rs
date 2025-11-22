@@ -59,7 +59,7 @@ where
       We want a golden-section search the first iteration.  Force this by setting
       movement equal to zero.
     */
-    let mut movement = 0.0;
+    let mut movement: f64 = 0.0;
     let mut trial = 0.0;
 
     /*

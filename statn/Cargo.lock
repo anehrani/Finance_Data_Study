@@ -267,6 +267,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "try_diff_ev"
+version = "0.1.0"
+dependencies = [
+ "finance_tools",
+ "indicators",
+ "matlib",
+ "serde",
+ "statn",
+ "stats",
+]
+
+[[package]]
 name = "try_estimators"
 version = "0.1.0"
 dependencies = [
