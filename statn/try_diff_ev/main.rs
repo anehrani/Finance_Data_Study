@@ -227,24 +227,26 @@ fn main() {
     let high_bounds = vec![max_lookback as f64, 99.0, max_thresh, max_thresh];
     let mintrades = 20;
 
-    // Initialize StocBias wrapped in RefCell for interior mutability
-    let stoc_bias_cell = std::cell::RefCell::new(StocBias::new(market_data.prices.len() - max_lookback));
-    if stoc_bias_cell.borrow().is_none() {
+    // Initialize StocBias
+    let mut stoc_bias_opt = StocBias::new(market_data.prices.len() - max_lookback);
+    if stoc_bias_opt.is_none() {
         println!("Insufficient memory for StocBias");
         process::exit(1);
     }
 
-    // Create a closure that borrows from RefCell
+    // Create a raw pointer to share StocBias between diff_ev and criter_wrapper
+    // This is safe because we control the lifetime and ensure no aliasing issues
+    let sb_ptr = stoc_bias_opt.as_mut().unwrap() as *mut statn::estimators::StocBias;
+
+    // Create a closure that uses the raw pointer
     let criter_wrapper = |params: &[f64], mintrades: i32| -> f64 {
-        let mut sb_opt = stoc_bias_cell.borrow_mut();
-        criter(params, mintrades, &market_data, &mut sb_opt.as_mut())
+        unsafe {
+            let mut sb_ref = Some(&mut *sb_ptr);
+            criter(params, mintrades, &market_data, &mut sb_ref)
+        }
     };
 
-    // For diff_ev, we need to pass &mut Option<StocBias>
-    // We'll extract it temporarily
-    let mut stoc_bias_for_diff_ev = stoc_bias_cell.borrow_mut().take();
-
-    // Run diff_ev
+    // Run diff_ev - it will set collecting mode automatically
     let result = diff_ev(
         criter_wrapper,
         4,
@@ -260,11 +262,10 @@ fn main() {
         &low_bounds,
         &high_bounds,
         true,
-        &mut stoc_bias_for_diff_ev,
+        &mut stoc_bias_opt,
     );
 
-    // Put it back
-    *stoc_bias_cell.borrow_mut() = stoc_bias_for_diff_ev;
+
 
     match result {
         Ok(params) => {
@@ -274,7 +275,7 @@ fn main() {
             }
 
             // Compute and print stochastic bias estimate
-            if let Some(ref sb) = *stoc_bias_cell.borrow() {
+            if let Some(ref sb) = stoc_bias_opt {
                 let (is_mean, oos_mean, bias) = sb.compute();
                 println!("\n\nVery rough estimates from differential evolution initialization...");
                 println!("\n  In-sample mean = {:.4}", is_mean);
@@ -282,6 +283,7 @@ fn main() {
                 println!("\n  Bias = {:.4}", bias);
                 println!("\n  Expected = {:.4}", params[4] - bias);
             }
+
             
             // Sensitivity
             let _ = sensitivity(
@@ -301,5 +303,5 @@ fn main() {
         }
     }
 
-    println!("\n\nPress any key...");
+    println!("\n\n Completed...");
 }

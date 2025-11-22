@@ -333,8 +333,8 @@ where
             // No, C++ writes to dest_ptr and then overwrites with parent1 if inferior.
             
             // Let's write directly to pop2
-            for v in (0..nvars).rev() {
-                let mut idx = (start_param + v + 1) % nvars; // Logic from C++: j = (j+1)%nvars... wait
+            //for v in (0..nvars).rev() {
+            //    let idx = (start_param + v + 1) % nvars; // Logic from C++: j = (j+1)%nvars... wait
                 // C++:
                 // do { j = ... } while (j >= nvars);
                 // for (i=nvars-1; i>=0; i--) {
@@ -345,7 +345,7 @@ where
                 
                 // Let's replicate the loop structure exactly
                 // j is the current parameter index being processed
-            }
+            //}
             
             let mut curr_param_idx = (unifrand() * nvars as f64) as usize;
             if curr_param_idx >= nvars { curr_param_idx = nvars - 1; } // safety

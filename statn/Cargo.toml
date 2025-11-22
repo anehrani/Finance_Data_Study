@@ -8,6 +8,7 @@ members = [
     "try_estimators",
     "try_cd_ma",
     "try_diff_ev",
+    "check_sensitivity",
     "gap_analysis",
 ]
 

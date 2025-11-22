@@ -1,0 +1,11 @@
+[package]
+name = "check_sensitivity"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "check_sensitivity"
+path = "main.rs"
+
+[dependencies]
+statn = { path = "../" }
