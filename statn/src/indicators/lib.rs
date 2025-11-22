@@ -1,2 +1,2 @@
 pub mod trend;
-pub mod volatility;
+pub mod volitality;

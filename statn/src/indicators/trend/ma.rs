@@ -55,6 +55,39 @@ pub fn compute_trend(
     trend
 }
 
+/// Compute moving average crossover indicators
+pub fn compute_indicators(
+    nind: usize,
+    prices: &[f64],
+    start_idx: usize,
+    short_term: usize,
+    long_term: usize,
+) -> Vec<f64> {
+    let mut inds = vec![0.0; nind];
+    
+    for i in 0..nind {
+        let k = start_idx + i;
+        
+        // Compute short-term mean
+        let mut short_mean = 0.0;
+        for j in 0..short_term {
+            short_mean += prices[k - j];
+        }
+        short_mean /= short_term as f64;
+        
+        // Compute long-term mean
+        let mut long_mean = 0.0;
+        for j in 0..long_term {
+            long_mean += prices[k - j];
+        }
+        long_mean /= long_term as f64;
+        
+        inds[i] = short_mean - long_mean;
+    }
+    
+    inds
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

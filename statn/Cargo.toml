@@ -4,10 +4,10 @@ members = [
     "src/core/stats",
     "src/finance_tools",
     "src/indicators",
-    "gap_analysis",
     "try_indicators",
     "try_estimators",
-    "try_cd_ma"
+    "try_cd_ma",
+    "gap_analysis",
 ]
 
 [package]
