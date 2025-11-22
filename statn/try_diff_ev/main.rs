@@ -156,20 +156,33 @@ fn criter(
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     
-    let (max_lookback, max_thresh, filename) = if args.len() == 4 {
-        (
-            args[1].parse::<usize>().unwrap_or(100),
-            args[2].parse::<f64>().unwrap_or(100.0),
-            args[3].clone(),
-        )
+    let (max_lookback, max_thresh, filename, verbose) = if args.len() >= 4 {
+        let max_lookback = args[1].parse::<usize>().unwrap_or(100);
+        let max_thresh = args[2].parse::<f64>().unwrap_or(100.0);
+        let filename = args[3].clone();
+        // Optional 4th argument for verbose mode (default: false)
+        let verbose = if args.len() >= 5 {
+            args[4].parse::<bool>().unwrap_or(false) || args[4].eq_ignore_ascii_case("true") || args[4] == "1"
+        } else {
+            false
+        };
+        (max_lookback, max_thresh, filename, verbose)
     } else {
-        println!("\nUsage: try_diff_ev  max_lookback  max_thresh  filename");
+        println!("\nUsage: try_diff_ev  max_lookback  max_thresh  filename  [verbose]");
         println!("  max_lookback - Maximum moving-average lookback");
         println!("  max_thresh - Maximum fraction threshold times 10000");
         println!("  filename - name of market file (YYYYMMDD Price)");
+        println!("  verbose - Optional: true/false to show detailed progress (default: false)");
         // Default values for testing if no args
-        (100, 100.0, "test_data.txt".to_string())
+        (100, 100.0, "test_data.txt".to_string(), false)
     };
+
+    println!("\nConfiguration:");
+    println!("  Max lookback: {}", max_lookback);
+    println!("  Max threshold: {}", max_thresh);
+    println!("  Data file: {}", filename);
+    println!("  Verbose mode: {}\n", verbose);
+
 
     // Read market prices
     let path = Path::new(&filename);
@@ -261,9 +274,10 @@ fn main() {
         0.3,
         &low_bounds,
         &high_bounds,
-        true,
+        verbose,  // Use command-line argument
         &mut stoc_bias_opt,
     );
+
 
 
 
