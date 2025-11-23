@@ -1,5 +1,3 @@
-use clap::{Parser, Subcommand};
-use std::path::PathBuf;
 use std::process;
 
 use statn::estimators::sensitivity::sensitivity;
@@ -7,199 +5,19 @@ use statn::estimators::StocBias;
 use statn::models::differential_evolution::diff_ev;
 
 use try_diff_ev::{
-    backtest_signals, generate_signals, load_market_data, load_parameters,
+    backtest_signals, criter, generate_signals, load_market_data, load_parameters,
     save_parameters, visualise_signals, MarketData,
 };
 
-/// Trading system using moving average crossover with differential evolution
-#[derive(Parser, Debug)]
-#[command(name = "try_diff_ev")]
-#[command(about = "Trading signal generation, optimization, and backtesting", long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
+// Include entrypoint helper module
+#[path = "entrypoint_helper.rs"]
+mod entrypoint_helper;
 
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Run differential evolution optimization to find best parameters
-    Optimize {
-        /// Path to market data file
-        #[arg(short, long)]
-        data_file: PathBuf,
-        
-        /// Maximum lookback period
-        #[arg(short = 'l', long, default_value_t = 100)]
-        max_lookback: usize,
-        
-        /// Maximum threshold (×10000)
-        #[arg(short = 't', long, default_value_t = 100.0)]
-        max_thresh: f64,
-        
-        /// Population size
-        #[arg(short, long, default_value_t = 300)]
-        popsize: usize,
-        
-        /// Maximum generations
-        #[arg(short = 'g', long, default_value_t = 10000)]
-        max_gens: usize,
-        
-        /// Minimum trades required
-        #[arg(short = 'm', long, default_value_t = 20)]
-        min_trades: i32,
-        
-        /// Output file for optimized parameters
-        #[arg(short, long, default_value = "params.txt")]
-        output: PathBuf,
-        
-        /// Output directory
-        #[arg(short = 'D', long, default_value = ".")]
-        output_dir: PathBuf,
-        
-        /// Enable verbose output
-        #[arg(short, long)]
-        verbose: bool,
-    },
-    
-    /// Generate signals and backtest using optimized parameters
-    Predict {
-        /// Path to market data file
-        #[arg(short, long)]
-        data_file: PathBuf,
-        
-        /// File containing optimized parameters
-        #[arg(short, long, default_value = "params.txt")]
-        params_file: PathBuf,
-        
-        /// Initial budget for backtesting
-        #[arg(short, long, default_value_t = 10000.0)]
-        budget: f64,
-        
-        /// Transaction cost percentage
-        #[arg(short = 'c', long, default_value_t = 0.1)]
-        transaction_cost: f64,
-        
-        /// Output directory
-        #[arg(short = 'D', long, default_value = ".")]
-        output_dir: PathBuf,
-        
-        /// Enable verbose output
-        #[arg(short, long)]
-        verbose: bool,
-    },
-}
+use clap::Parser;
+use entrypoint_helper::{Cli, Commands};
 
 
 
-/// Evaluate a thresholded moving-average crossover system
-fn test_system(
-    prices: &[f64],
-    max_lookback: usize,
-    long_term: usize,
-    short_pct: f64,
-    short_thresh: f64,
-    long_thresh: f64,
-    returns: Option<&mut [f64]>,
-) -> (f64, i32) {
-    let ncases = prices.len();
-    let short_term = (0.01 * short_pct * long_term as f64) as usize;
-    let short_term = short_term.max(1).min(long_term - 1);
-    
-    let short_thresh = short_thresh / 10000.0;
-    let long_thresh = long_thresh / 10000.0;
-
-    let mut sum = 0.0;
-    let mut ntrades = 0;
-    
-    let process_trade = |i: usize, prices: &[f64], short_mean: f64, long_mean: f64| -> (f64, bool) {
-        let change = short_mean / long_mean - 1.0;
-        if change > long_thresh {
-            (prices[i+1] - prices[i], true)
-        } else if change < -short_thresh {
-            (prices[i] - prices[i+1], true)
-        } else {
-            (0.0, false)
-        }
-    };
-    
-    match returns {
-        Some(ret_slice) => {
-            let mut ret_idx = 0;
-            for i in (max_lookback - 1)..(ncases - 1) {
-                let short_mean: f64 = prices[i + 1 - short_term..=i].iter().sum::<f64>() / short_term as f64;
-                let long_mean: f64 = prices[i + 1 - long_term..=i].iter().sum::<f64>() / long_term as f64;
-                
-                let (ret, traded) = process_trade(i, prices, short_mean, long_mean);
-                if traded { ntrades += 1; }
-                sum += ret;
-                if ret_idx < ret_slice.len() {
-                    ret_slice[ret_idx] = ret;
-                    ret_idx += 1;
-                }
-            }
-        }
-        None => {
-            for i in (max_lookback - 1)..(ncases - 1) {
-                let short_mean: f64 = prices[i + 1 - short_term..=i].iter().sum::<f64>() / short_term as f64;
-                let long_mean: f64 = prices[i + 1 - long_term..=i].iter().sum::<f64>() / long_term as f64;
-                
-                let (ret, traded) = process_trade(i, prices, short_mean, long_mean);
-                if traded { ntrades += 1; }
-                sum += ret;
-            }
-        }
-    }
-
-    (sum, ntrades)
-}
-
-/// Criterion function for optimization
-fn criter(
-    params: &[f64],
-    mintrades: i32,
-    data: &MarketData,
-    stoc_bias: &mut Option<&mut StocBias>,
-) -> f64 {
-    let long_term = (params[0] + 1.0e-10) as usize;
-    let short_pct = params[1];
-    let short_thresh = params[2];
-    let long_thresh = params[3];
-
-    let (ret_val, ntrades) = if let Some(sb) = stoc_bias {
-        let returns = sb.returns_mut();
-        test_system(
-            &data.prices,
-            data.max_lookback,
-            long_term,
-            short_pct,
-            short_thresh,
-            long_thresh,
-            Some(returns),
-        )
-    } else {
-        test_system(
-            &data.prices,
-            data.max_lookback,
-            long_term,
-            short_pct,
-            short_thresh,
-            long_thresh,
-            None,
-        )
-    };
-
-    if let Some(sb) = stoc_bias {
-        if ret_val > 0.0 {
-            sb.process();
-        }
-    }
-
-    if ntrades >= mintrades {
-        ret_val
-    } else {
-        -1.0e20
-    }
-}
 
 
 
