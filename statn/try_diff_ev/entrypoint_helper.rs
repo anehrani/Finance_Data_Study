@@ -38,6 +38,10 @@ pub enum Commands {
         #[arg(short = 'm', long, default_value_t = 20)]
         min_trades: i32,
         
+        /// Training data percentage (0.0 - 1.0)
+        #[arg(long, default_value_t = 0.7)]
+        train_pct: f64,
+        
         /// Output file for optimized parameters
         #[arg(short, long, default_value = "params.txt")]
         output: PathBuf,
@@ -69,11 +73,14 @@ pub enum Commands {
         #[arg(short = 'c', long, default_value_t = 0.1)]
         transaction_cost: f64,
         
+        /// Training data percentage (0.0 - 1.0)
+        #[arg(long, default_value_t = 0.7)]
+        train_pct: f64,
+        
         /// Output directory
         #[arg(short = 'D', long, default_value = "../results/")]
         output_dir: PathBuf,
         
-        /// Enable verbose output
         #[arg(short, long)]
         verbose: bool,
     },

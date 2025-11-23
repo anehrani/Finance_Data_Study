@@ -32,6 +32,7 @@ fn main() {
             popsize,
             max_gens,
             min_trades,
+            train_pct,
             output,
             output_dir,
             verbose,
@@ -58,10 +59,24 @@ fn main() {
             }
             
             // Run optimization
+            let split_idx = (market_data.prices.len() as f64 * train_pct) as usize;
+            if split_idx < max_lookback + 10 {
+                eprintln!("Training set too small: {} prices", split_idx);
+                process::exit(1);
+            }
+            
+            println!("Training on first {} prices ({:.1}%)", split_idx, train_pct * 100.0);
+            
+            // Create training market data
+            let train_data = MarketData {
+                prices: market_data.prices[..split_idx].to_vec(),
+                max_lookback: market_data.max_lookback,
+            };
+            
             let low_bounds = vec![2.0, 0.01, 0.0, 0.0];
             let high_bounds = vec![max_lookback as f64, 99.0, max_thresh, max_thresh];
             
-            let mut stoc_bias_opt = StocBias::new(market_data.prices.len() - max_lookback);
+            let mut stoc_bias_opt = StocBias::new(train_data.prices.len() - max_lookback);
             if stoc_bias_opt.is_none() {
                 eprintln!("Insufficient memory for StocBias");
                 process::exit(1);
@@ -71,7 +86,7 @@ fn main() {
             let criter_wrapper = |params: &[f64], mintrades: i32| -> f64 {
                 unsafe {
                     let mut sb_ref = Some(&mut *sb_ptr);
-                    criter(params, mintrades, &market_data, &mut sb_ref)
+                    criter(params, mintrades, &train_data, &mut sb_ref)
                 }
             };
             
@@ -114,7 +129,7 @@ fn main() {
                     // Sensitivity analysis
                     println!("\nRunning sensitivity analysis...");
                     let _ = sensitivity(
-                        |p, m| criter(p, m, &market_data, &mut None),
+                        |p, m| criter(p, m, &train_data, &mut None),
                         4, 1, 30, 80, min_trades, &params,
                         &low_bounds, &high_bounds,
                     );
@@ -132,6 +147,7 @@ fn main() {
             params_file,
             budget,
             transaction_cost,
+            train_pct,
             output_dir,
             verbose,
         } => {
@@ -184,21 +200,42 @@ fn main() {
                 params[1], params[2], params[3],
             );
             
-            // Print last 20 signals
+            // Slice for backtesting (unseen data)
+            let split_idx = (market_data.prices.len() as f64 * train_pct) as usize;
+            println!("Backtesting on unseen data: prices {} to {} ({:.1}% of data)", 
+                     split_idx, market_data.prices.len(), (1.0 - train_pct) * 100.0);
+            
+            if split_idx >= result.prices.len() {
+                eprintln!("No data left for backtesting!");
+                process::exit(1);
+            }
+            
+            // Create result slice for backtesting
+            // We need to construct a new SignalResult with the sliced data
+            let test_result = try_diff_ev::SignalResult {
+                prices: result.prices[split_idx..].to_vec(),
+                signals: result.signals[split_idx..].to_vec(),
+                long_lookback: result.long_lookback,
+                short_pct: result.short_pct,
+                short_thresh: result.short_thresh,
+                long_thresh: result.long_thresh,
+            };
+            
+            // Print last 20 signals of the TEST set
             if verbose {
-                println!("Last 20 signals:");
-                let start = result.signals.len().saturating_sub(20);
-                for i in start..result.signals.len() {
-                    let sig = match result.signals[i] {
+                println!("Last 20 signals (of test set):");
+                let start = test_result.signals.len().saturating_sub(20);
+                for i in start..test_result.signals.len() {
+                    let sig = match test_result.signals[i] {
                         1 => "BUY", -1 => "SELL", _ => "HOLD",
                     };
-                    println!("{:>5}: price={:.4} -> {}", i, result.prices[i], sig);
+                    println!("{:>5}: price={:.4} -> {}", i + split_idx, test_result.prices[i], sig);
                 }
                 println!();
             }
             
             // Backtest
-            let stats = backtest_signals(&result, budget, transaction_cost);
+            let stats = backtest_signals(&test_result, budget, transaction_cost);
             
             println!("=== BACKTEST RESULTS ===");
             println!("Initial Budget:    ${:.2}", stats.initial_budget);
@@ -215,9 +252,10 @@ fn main() {
             println!("  Max Drawdown:    {:.2}%", stats.max_drawdown);
             println!("  Sharpe Ratio:    {:.4}", stats.sharpe_ratio);
             
-            // Visualize
+            // Visualize (full data with split marker?)
+            // For now, visualize the test period
             let chart_path = output_dir.join("signal_chart.png");
-            if let Err(e) = visualise_signals(&result, &chart_path) {
+            if let Err(e) = visualise_signals(&test_result, &chart_path) {
                 eprintln!("Failed to create chart: {}", e);
             } else {
                 println!("\n✓ Chart saved to: {}", chart_path.display());
