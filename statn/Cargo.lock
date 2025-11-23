@@ -690,6 +690,7 @@ name = "montecarlo_permutation_test"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "statn",
  "tempfile",
 ]
 

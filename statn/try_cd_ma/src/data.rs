@@ -1,24 +1,12 @@
 use anyhow::Result;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum DataError {
-    #[error("Failed to open file: {path}")]
-    FileOpen {
-        path: String,
-        #[source]
-        source: std::io::Error,
-    },
-    
-    #[error("Invalid price data at line {line}: {reason}")]
-    InvalidPrice { line: usize, reason: String },
-    
     #[error("Insufficient data: need at least {needed} prices, got {got}")]
     InsufficientData { needed: usize, got: usize },
 }
+
 
 /// Market data structure
 #[derive(Debug, Clone)]
@@ -35,76 +23,9 @@ pub struct DataSplit {
     pub max_lookback: usize,
 }
 
-/// Load market prices from file (YYYYMMDD Price format)
-pub fn load_prices<P: AsRef<Path>>(path: P) -> Result<Vec<f64>> {
-    let path_str = path.as_ref().display().to_string();
-    let file = File::open(&path).map_err(|e| DataError::FileOpen {
-        path: path_str.clone(),
-        source: e,
-    })?;
-    
-    let reader = BufReader::new(file);
-    
-    let prices: Result<Vec<f64>> = reader
-        .lines()
-        .enumerate()
-        .filter_map(|(line_num, line_result)| {
-            match line_result {
-                Ok(line) if line.trim().is_empty() => None,
-                Ok(line) => Some(parse_price_line(&line, line_num + 1)),
-                Err(e) => Some(Err(e.into())),
-            }
-        })
-        .collect();
-    
-    let prices = prices?;
-    
-    if prices.is_empty() {
-        anyhow::bail!("No valid price data found in file: {}", path_str);
-    }
-    
-    println!("Loaded {} prices from {}", prices.len(), path_str);
-    Ok(prices)
-}
+// Re-export from shared I/O module
+pub use statn::core::io::read_price_file as load_prices;
 
-/// Parse a single line of price data
-fn parse_price_line(line: &str, line_num: usize) -> Result<f64> {
-    let parts: Vec<&str> = line.split_whitespace().collect();
-    
-    if parts.len() < 2 {
-        return Err(DataError::InvalidPrice {
-            line: line_num,
-            reason: "Expected YYYYMMDD Price format".to_string(),
-        }
-        .into());
-    }
-    
-    // Validate date format (8 digits)
-    if parts[0].len() != 8 || !parts[0].chars().all(|c| c.is_ascii_digit()) {
-        return Err(DataError::InvalidPrice {
-            line: line_num,
-            reason: format!("Invalid date format: {}", parts[0]),
-        }
-        .into());
-    }
-    
-    // Parse price
-    let price: f64 = parts[1].parse().map_err(|_| DataError::InvalidPrice {
-        line: line_num,
-        reason: format!("Invalid price: {}", parts[1]),
-    })?;
-    
-    if price <= 0.0 {
-        return Err(DataError::InvalidPrice {
-            line: line_num,
-            reason: format!("Price must be positive, got {}", price),
-        }
-        .into());
-    }
-    
-    // Convert to log price
-    Ok(price.ln())
-}
 
 /// Split data into training and test sets
 pub fn split_train_test(
@@ -158,14 +79,6 @@ mod tests {
     use super::*;
     use std::io::Write;
     use tempfile::NamedTempFile;
-    
-    #[test]
-    fn test_parse_price_line() {
-        assert!(parse_price_line("20200101 100.0", 1).is_ok());
-        assert!(parse_price_line("invalid", 1).is_err());
-        assert!(parse_price_line("20200101 -10.0", 1).is_err());
-        assert!(parse_price_line("20200101", 1).is_err());
-    }
     
     #[test]
     fn test_load_prices() {

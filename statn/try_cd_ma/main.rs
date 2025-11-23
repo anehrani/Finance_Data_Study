@@ -9,7 +9,8 @@ fn main() -> Result<()> {
     
     // Load market data
     println!("Loading market data...");
-    let prices = load_prices(&config.data_file)?;
+    let prices = load_prices(&config.data_file)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     
     // Split into training and test sets
     let split = split_train_test(&prices, config.max_lookback(), config.n_test)?;
