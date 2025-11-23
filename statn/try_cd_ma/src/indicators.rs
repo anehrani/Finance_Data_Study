@@ -1,5 +1,6 @@
 use anyhow::Result;
 use indicators::trend::ma::compute_indicators as compute_ma_indicator;
+use statn::core::io::compute_targets;
 
 /// Specification for a single indicator (MA crossover)
 #[derive(Debug, Clone)]
@@ -63,16 +64,6 @@ pub fn compute_all_indicators(
     }
     
     Ok(data)
-}
-
-/// Compute targets (returns) for a dataset
-pub fn compute_targets(prices: &[f64], start_idx: usize, n_cases: usize) -> Vec<f64> {
-    (0..n_cases)
-        .map(|i| {
-            let idx = start_idx + i;
-            prices[idx + 1] - prices[idx]
-        })
-        .collect()
 }
 
 /// Compute both indicators and targets

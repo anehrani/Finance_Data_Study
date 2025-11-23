@@ -13,10 +13,20 @@ fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     
     // Split into training and test sets
-    let split = split_train_test(&prices, config.max_lookback(), config.n_test)?;
+    let split = split_train_test(&prices, config.max_lookback(), config.n_test)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    
+    println!("Training cases: {}", split.train_data.len() - split.max_lookback);
+    println!("Test cases: {}", split.test_data.len() - split.max_lookback);
+    
+    // Generate indicator specifications
+    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short);
+    println!("Number of indicators: {}", specs.len());
+    
+    // Compute training indicators
+    let n_train = split.train_data.len() - split.max_lookback - 1;
     
     // Validate sufficient training data
-    let n_train = split.train_prices.len() - config.max_lookback();
     if n_train < config.n_vars() + 10 {
         anyhow::bail!(
             "Insufficient training data: need at least {} cases, got {}",
@@ -25,16 +35,10 @@ fn main() -> Result<()> {
         );
     }
     
-    println!("Number of indicators: {}", config.n_vars());
-    
-    // Generate indicator specifications
-    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short);
-    
-    // Compute training indicators and targets
     println!("Computing training indicators...");
     let train_data = compute_indicator_data(
-        &split.train_prices,
-        config.max_lookback() - 1,
+        &split.train_data,
+        split.max_lookback,
         n_train,
         &specs,
     )?;
@@ -55,8 +59,8 @@ fn main() -> Result<()> {
     // Compute test indicators and targets
     println!("Computing test indicators...");
     let test_data = compute_indicator_data(
-        &split.test_prices,
-        config.max_lookback() - 1,
+        &split.test_data,
+        split.max_lookback,
         config.n_test,
         &specs,
     )?;
