@@ -13,6 +13,7 @@ members = [
     "train_bias",
     "overlap",
     "cross_validation_mkt",
+    "chooser",
 ]
 
 [package]
