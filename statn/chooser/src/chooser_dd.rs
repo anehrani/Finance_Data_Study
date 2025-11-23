@@ -236,10 +236,11 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     }
 
     // Sort for CDF and find quantiles
-    qsortd(&mut q001);
-    qsortd(&mut q01);
-    qsortd(&mut q05);
-    qsortd(&mut q10);
+    // Sort for CDF and find quantiles
+    qsortd(0, bootstrap_reps - 1, &mut q001);
+    qsortd(0, bootstrap_reps - 1, &mut q01);
+    qsortd(0, bootstrap_reps - 1, &mut q05);
+    qsortd(0, bootstrap_reps - 1, &mut q10);
 
     // Print for user
     writeln!(fp_report, "\n\nDrawdown approximate bounds.")?;

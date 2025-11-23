@@ -16,8 +16,7 @@ pub fn run_selection_bias(
     );
 
     // Initialize RNG
-    let mut rng = Rng::new();
-    rng.seed(123456789);
+    let mut rng = Rng::with_seed(123456789);
 
     let mut l_is_mean = 0.0;
     let mut s_is_mean = 0.0;
@@ -40,10 +39,10 @@ pub fn run_selection_bias(
             }
             x[i] = x[i - 1]
                 + trend
-                + rng.uniform()
-                + rng.uniform()
-                - rng.uniform()
-                - rng.uniform();
+                + rng.unifrand()
+                + rng.unifrand()
+                - rng.unifrand()
+                - rng.unifrand();
         }
 
         // Compute optimal parameters for long-only model
@@ -66,10 +65,10 @@ pub fn run_selection_bias(
             }
             x_oos1[i] = x_oos1[i - 1]
                 + trend
-                + rng.uniform()
-                + rng.uniform()
-                - rng.uniform()
-                - rng.uniform();
+                + rng.unifrand()
+                + rng.unifrand()
+                - rng.unifrand()
+                - rng.unifrand();
         }
 
         // Test first OOS set with both models
@@ -108,10 +107,10 @@ pub fn run_selection_bias(
             }
             x_oos2[i] = x_oos2[i - 1]
                 + trend
-                + rng.uniform()
-                + rng.uniform()
-                - rng.uniform()
-                - rng.uniform();
+                + rng.unifrand()
+                + rng.unifrand()
+                - rng.unifrand()
+                - rng.unifrand();
         }
 
         // Choose either the long or the short model, depending on which

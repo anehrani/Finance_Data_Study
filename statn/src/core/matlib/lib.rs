@@ -10,3 +10,5 @@ pub use paramcor::*;
 pub use qsorts::*;
 pub use rands::*;
 pub use linalg::*;
+mod mwc256;
+pub use mwc256::*;

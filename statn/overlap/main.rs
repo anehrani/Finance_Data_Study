@@ -77,44 +77,7 @@ fn quicksort_range(data: &mut [f64], first: usize, last: usize) {
     }
 }
 
-/// Marsaglia's MWC256 random number generator
-struct Mwc256 {
-    q: [u32; 256],
-    carry: u32,
-    i: u8,
-}
-
-impl Mwc256 {
-    fn new(seed: u32) -> Self {
-        let mut q = [0u32; 256];
-        let mut j = seed;
-
-        for item in q.iter_mut() {
-            j = j.wrapping_mul(69069).wrapping_add(12345);
-            *item = j;
-        }
-
-        Mwc256 {
-            q,
-            carry: 362436,
-            i: 255,
-        }
-    }
-
-    fn next(&mut self) -> u32 {
-        self.i = self.i.wrapping_add(1);
-        let a: u64 = 809430660;
-        let t = a * (self.q[self.i as usize] as u64) + (self.carry as u64);
-        self.carry = (t >> 32) as u32;
-        self.q[self.i as usize] = (t & 0xFFFFFFFF) as u32;
-        self.q[self.i as usize]
-    }
-
-    fn unifrand(&mut self) -> f64 {
-        let mult = 1.0 / 0xFFFFFFFFu32 as f64;
-        mult * (self.next() as f64)
-    }
-}
+use matlib::Mwc256;
 
 /// Compute indicator (linear slope) and target (price change)
 fn ind_targ(lookback: usize, lookahead: usize, x: &[f64]) -> (f64, f64) {
@@ -192,7 +155,7 @@ fn main() {
         args.nprices, args.lookback, args.lookahead, args.ntrain, args.ntest, args.omit, args.extra
     );
 
-    let mut rng = Mwc256::new(123456789);
+    let mut rng = Mwc256::with_seed(123456789);
     let mut save_t = vec![0.0; args.nreps];
     let mut p1_count = 0;
 

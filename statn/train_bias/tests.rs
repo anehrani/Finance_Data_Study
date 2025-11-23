@@ -6,50 +6,60 @@ mod tests {
     use crate::test_system::test_system;
 
     #[test]
-    fn test_rng_seed() {
-        let mut rng = Rng::new();
-        rng.seed(12345);
-        let val1 = rng.uniform();
-        let mut rng2 = Rng::new();
-        rng2.seed(12345);
-        let val2 = rng2.uniform();
+    fn test_rng_determinism() {
+        let mut rng = Rng::with_seed(12345);
+        let val1 = rng.unifrand();
+
+        let mut rng2 = Rng::with_seed(12345);
+        let val2 = rng2.unifrand();
+
         assert_eq!(val1, val2);
     }
 
     #[test]
-    fn test_rng_range() {
-        let mut rng = Rng::new();
-        rng.seed(12345);
-        for _ in 0..100 {
-            let u = rng.uniform();
+    fn test_rng_distribution() {
+        let mut rng = Rng::with_seed(12345);
+        let mut sum = 0.0;
+        let n = 10000;
+
+        for _ in 0..n {
+            let u = rng.unifrand();
             assert!(u >= 0.0 && u < 1.0);
+            sum += u;
         }
+
+        let mean = sum / n as f64;
+        assert!((mean - 0.5).abs() < 0.01);
     }
 
     #[test]
-    fn test_opt_params() {
-        let mut rng = Rng::new();
-        rng.seed(12345);
-        let mut x = vec![0.0; 500];
-        x[0] = 0.0;
-        for i in 1..500 {
-            x[i] = x[i - 1] + rng.uniform() - 0.5;
+    fn test_opt_params_simple() {
+        let mut x = vec![0.0; 100];
+        let mut rng = Rng::with_seed(12345);
+        
+        // Create a simple uptrend
+        for i in 1..100 {
+            x[i] = x[i - 1] + rng.unifrand() - 0.5 + 0.1; // +0.1 bias
         }
-        let (perf, short, long) = opt_params(OptCriteria::MeanReturn, &x);
-        assert!(short >= 1);
-        assert!(long >= 2);
+
+        // Should prefer long-only
+        let (perf, short, long) = opt_params(OptCriteria::MeanReturn, true, &x);
+        assert!(perf > 0.0);
+        assert!(short > 0);
         assert!(long > short);
-        assert!(!perf.is_nan());
     }
 
     #[test]
     fn test_test_system() {
-        let mut x = vec![0.0; 100];
-        for i in 1..100 {
-            x[i] = x[i - 1] + 0.01;
-        }
-        let result = test_system(&x, 5, 10);
-        assert!(!result.is_nan());
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        // Simple uptrend. 
+        // short_term=1, long_term=2.
+        // i=1: s=2, l=(1+2)/2=1.5. s>l -> Buy.
+        // i=2: s=3, l=(2+3)/2=2.5. s>l -> Buy.
+        // ...
+        // Should have positive return.
+        let result = test_system(true, &x, 1, 2);
+        assert!(result > 0.0);
     }
 
     #[test]
@@ -61,20 +71,16 @@ mod tests {
     }
 
     #[test]
-    fn test_price_generation() {
-        let mut rng = Rng::new();
-        rng.seed(42);
-        let ncases = 100;
-        let trend = 0.1;
-        let mut x = vec![0.0; ncases];
-        x[0] = 0.0;
-        for i in 1..ncases {
-            x[i] = x[i - 1] + trend + rng.uniform() - 0.5;
+    fn test_integration_run() {
+        let mut x = vec![0.0; 100];
+        let mut rng = Rng::with_seed(42);
+        let trend = 0.01;
+        
+        for i in 1..100 {
+            x[i] = x[i - 1] + trend + rng.unifrand() - 0.5;
         }
-        assert_eq!(x.len(), ncases);
-        assert_eq!(x[0], 0.0);
-        for i in 1..ncases {
-            assert_ne!(x[i], x[i - 1]);
-        }
+        
+        let (perf, _, _) = opt_params(OptCriteria::MeanReturn, true, &x);
+        assert!(perf > -10.0);
     }
 }

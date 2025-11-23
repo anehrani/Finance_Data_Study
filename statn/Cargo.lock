@@ -164,6 +164,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "matlib",
  "rand",
 ]
 
@@ -339,6 +340,7 @@ dependencies = [
 name = "drawdown"
 version = "0.1.0"
 dependencies = [
+ "matlib",
  "rand",
  "rand_distr",
 ]
@@ -694,6 +696,7 @@ name = "montecarlo_permutation_test"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "matlib",
  "statn",
  "tempfile",
 ]
@@ -731,6 +734,7 @@ name = "overlap"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "matlib",
  "rand",
  "stats",
 ]
@@ -1137,6 +1141,9 @@ checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 [[package]]
 name = "train_bias"
 version = "0.1.0"
+dependencies = [
+ "matlib",
+]
 
 [[package]]
 name = "try_cd_ma"
@@ -1167,6 +1174,7 @@ dependencies = [
  "serde",
  "statn",
  "stats",
+ "tempfile",
  "toml",
 ]
 

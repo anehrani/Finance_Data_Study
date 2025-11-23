@@ -47,7 +47,7 @@ pub fn drawdown_quantiles(
         work[iboot] = drawdown(quantsample);
     }
 
-    qsortd(work);
+    qsortd(0, nboot - 1, work);
 
     let q001 = find_quantile(nboot, work, 0.999);
     let q01 = find_quantile(nboot, work, 0.99);

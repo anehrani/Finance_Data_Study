@@ -3,9 +3,7 @@ use std::io::{self, Read};
 
 // External functions already implemented in Rust
 fn rand32m_seed(iseed: i32);
-fn unifrand() -> f64;
-fn normal() -> f64;
-fn qsortd(istart: usize, istop: usize, x: &mut [f64]);
+use matlib::{unifrand, qsortd};
 use stats::{normal_cdf, inverse_normal_cdf};
 
 // Bootstrap confidence interval functions from previous conversion
