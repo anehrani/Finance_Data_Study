@@ -14,7 +14,7 @@ members = [
     "overlap",
     "cross_validation_mkt",
     "chooser",
-    "per_what", "bound_mean", "bootstrap_rate", "conftest", "bnd_ret",
+    "per_what", "bound_mean", "bootstrap_rate", "conftest", "bnd_ret", "drawdown",
 ]
 
 [package]
