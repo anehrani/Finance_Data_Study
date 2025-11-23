@@ -1,0 +1,8 @@
+[package]
+name = "conftest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+stats = { path = "../src/core/stats" }
+rand = { workspace = true }
