@@ -12,6 +12,7 @@ members = [
     "gap_analysis",
     "train_bias",
     "overlap",
+    "cross_validation_mkt",
 ]
 
 [package]
