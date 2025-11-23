@@ -7,8 +7,8 @@ use statn::estimators::StocBias;
 use statn::models::differential_evolution::diff_ev;
 
 use try_diff_ev::{
-    backtest_signals, criter, generate_signals, load_market_data, load_parameters,
-    save_parameters, visualise_signals, MarketData,
+    backtest_signals, criter, criter_enhanced, generate_signals,
+    load_market_data, load_parameters, save_parameters, visualise_signals, MarketData,
 };
 
 // Include entrypoint helper module
@@ -36,6 +36,7 @@ fn main() {
             min_trades,
             train_pct,
             output,
+            generator,
             output_dir,
             verbose,
         } => {
@@ -88,7 +89,10 @@ fn main() {
             let criter_wrapper = |params: &[f64], mintrades: i32| -> f64 {
                 unsafe {
                     let mut sb_ref = Some(&mut *sb_ptr);
-                    criter(params, mintrades, &train_data, &mut sb_ref)
+                    match generator.as_str() {
+                        "log_diff" | "enhanced" => criter_enhanced(params, mintrades, &train_data, &mut sb_ref),
+                        _ => criter(params, mintrades, &train_data, &mut sb_ref),
+                    }
                 }
             };
             
@@ -131,7 +135,10 @@ fn main() {
                     // Sensitivity analysis
                     println!("\nRunning sensitivity analysis...");
                     let _ = sensitivity(
-                        |p, m| criter(p, m, &train_data, &mut None),
+                        |p, m| match generator.as_str() {
+                            "log_diff" | "enhanced" => criter_enhanced(p, m, &train_data, &mut None),
+                            _ => criter(p, m, &train_data, &mut None),
+                        },
                         4, 1, 30, 80, min_trades, &params,
                         &low_bounds, &high_bounds,
                     );
@@ -151,6 +158,7 @@ fn main() {
             transaction_cost,
             train_pct,
             output_dir,
+            generator,
             verbose,
         } => {
             println!("\n=== PREDICTION MODE ===");
@@ -196,7 +204,9 @@ fn main() {
             }
             
             // Generate signals
+            println!("Using signal generator: {}", generator);
             let result = generate_signals(
+                &generator,
                 &market_data.prices,
                 (params[0] + 1.0e-10) as usize,
                 params[1], params[2], params[3],

@@ -1,7 +1,7 @@
 //! Visualization module for plotting trading signals.
 
 use crate::backtest::TradeStats;
-use crate::signals::SignalResult;
+use crate::signals_generators::SignalResult;
 use plotters::prelude::*;
 use std::path::Path;
 

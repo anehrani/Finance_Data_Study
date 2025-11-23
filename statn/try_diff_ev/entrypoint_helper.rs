@@ -46,6 +46,10 @@ pub enum Commands {
         #[arg(short, long, default_value = "params.txt")]
         output: PathBuf,
         
+        /// Signal generator type ("original" or "log_diff")
+        #[arg(long, default_value = "original")]
+        generator: String,
+        
         /// Output directory
         #[arg(short = 'D', long, default_value = "../results/")]
         output_dir: PathBuf,
@@ -80,6 +84,10 @@ pub enum Commands {
         /// Output directory
         #[arg(short = 'D', long, default_value = "../results/")]
         output_dir: PathBuf,
+        
+        /// Signal generator type ("original" or "log_diff")
+        #[arg(long, default_value = "original")]
+        generator: String,
         
         #[arg(short, long)]
         verbose: bool,

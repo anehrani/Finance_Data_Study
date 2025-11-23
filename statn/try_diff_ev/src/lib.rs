@@ -15,14 +15,16 @@ pub mod backtest;
 pub mod config;
 pub mod evaluators;
 pub mod io;
-pub mod signals;
+pub mod signals_generators;
 pub mod test_system;
+pub mod test_system_enhanced;
 pub mod visualization;
 
 // Re-export commonly used types and functions
 pub use backtest::{backtest_signals, TradeStats};
 pub use config::Config;
-pub use evaluators::criter;
+pub use evaluators::{criter, criter_enhanced};
 pub use io::{load_market_data, load_parameters, save_parameters, MarketData};
-pub use signals::{generate_signals, SignalResult};
+pub use signals_generators::{generate_signals, SignalResult};
+pub use test_system_enhanced::test_system_enhanced;
 pub use visualization::visualise_signals;

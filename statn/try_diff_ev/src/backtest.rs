@@ -1,6 +1,6 @@
 //! Backtesting module for simulating trading strategies.
 
-use crate::signals::SignalResult;
+use crate::signals_generators::SignalResult;
 
 /// Statistics from backtesting a trading strategy.
 #[derive(Debug, Clone)]
