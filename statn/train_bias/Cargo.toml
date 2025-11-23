@@ -1,0 +1,12 @@
+[package]
+name = "train_bias"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "train_bias"
+path = "main.rs"
+
+[dependencies]
+
+[dev-dependencies]

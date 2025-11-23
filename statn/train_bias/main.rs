@@ -48,13 +48,13 @@ impl Rng {
 
     /// Returns a random f64 in [0, 1)
     fn uniform(&mut self) -> f64 {
-        const MULT: f64 = 1.0 / 0xFFFFFFFF as f64;
+        const MULT: f64 = 1.0 / 0xFFFFFFFFu32 as f64;
         MULT * self.next() as f64
     }
 }
 
 /// Optimization criteria enum
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum OptCriteria {
     MeanReturn = 0,
     ProfitFactor = 1,

@@ -10,6 +10,7 @@ members = [
     "try_diff_ev",
     "check_sensitivity",
     "gap_analysis",
+    "train_bias",
 ]
 
 [package]
