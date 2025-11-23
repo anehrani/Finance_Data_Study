@@ -11,6 +11,7 @@ members = [
     "check_sensitivity",
     "gap_analysis",
     "train_bias",
+    "overlap",
 ]
 
 [package]
