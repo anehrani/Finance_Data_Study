@@ -1,11 +1,15 @@
 use std::fs::File;
 use std::io::{self, BufRead};
-use std::path::Path;
+use std::path::PathBuf;
 use std::process;
 
 use statn::estimators::sensitivity::sensitivity;
 use statn::estimators::StocBias;
 use statn::models::differential_evolution::diff_ev;
+
+// Import library utilities
+use try_diff_ev::config::Config;
+use try_diff_ev::{backtest_signals, generate_signals, visualise_signals};
 
 // Global/Shared data for the criterion function
 struct MarketData {
@@ -152,170 +156,282 @@ fn criter(
     }
 }
 
-
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    
-    let (max_lookback, max_thresh, filename, verbose) = if args.len() >= 4 {
-        let max_lookback = args[1].parse::<usize>().unwrap_or(100);
-        let max_thresh = args[2].parse::<f64>().unwrap_or(100.0);
-        let filename = args[3].clone();
-        // Optional 4th argument for verbose mode (default: false)
-        let verbose = if args.len() >= 5 {
-            args[4].parse::<bool>().unwrap_or(false) || args[4].eq_ignore_ascii_case("true") || args[4] == "1"
-        } else {
-            false
-        };
-        (max_lookback, max_thresh, filename, verbose)
-    } else {
-        println!("\nUsage: try_diff_ev  max_lookback  max_thresh  filename  [verbose]");
-        println!("  max_lookback - Maximum moving-average lookback");
-        println!("  max_thresh - Maximum fraction threshold times 10000");
-        println!("  filename - name of market file (YYYYMMDD Price)");
-        println!("  verbose - Optional: true/false to show detailed progress (default: false)");
-        // Default values for testing if no args
-        (100, 100.0, "test_data.txt".to_string(), false)
-    };
-
-    println!("\nConfiguration:");
-    println!("  Max lookback: {}", max_lookback);
-    println!("  Max threshold: {}", max_thresh);
-    println!("  Data file: {}", filename);
-    println!("  Verbose mode: {}\n", verbose);
-
-
-    // Read market prices
-    let path = Path::new(&filename);
-    let file = match File::open(&path) {
-        Ok(f) => f,
-        Err(e) => {
-            println!("\n\nCannot open market history file {}: {}", filename, e);
-            process::exit(1);
-        }
-    };
+/// Load parameters from a file
+fn load_parameters(filename: &PathBuf) -> Result<Vec<f64>, String> {
+    let file = File::open(filename).map_err(|e| format!("Cannot open file: {}", e))?;
     let reader = io::BufReader::new(file);
-
-    let mut prices = Vec::new();
-    println!("\nReading market file...");
-
-    for (line_num, line) in reader.lines().enumerate() {
-        let line = match line {
-            Ok(l) => l,
-            Err(e) => {
-                println!("\nError reading line {} of file {}", line_num + 1, filename);
-                process::exit(1);
-            }
-        };
-        
-        if line.len() < 2 {
-            continue;
+    let mut params = Vec::new();
+    for line in reader.lines() {
+        let line = line.map_err(|e| format!("Error reading line: {}", e))?;
+        let trimmed = line.trim();
+        if !trimmed.is_empty() {
+            let val = trimmed.parse::<f64>().map_err(|e| format!("Parse error: {}", e))?;
+            params.push(val);
         }
+    }
+    Ok(params)
+}
 
-        // Parse: YYYYMMDD price1 price2 price3 price4
-        // We want the last price (close price)
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 2 {
-            // Take the last column as the close price
-            if let Ok(price) = parts[parts.len() - 1].parse::<f64>() {
-                if price > 0.0 {
-                    prices.push(price.ln());
+/// Save parameters to a file
+fn save_params_to_file(filename: &PathBuf, params: &[f64]) -> Result<(), String> {
+    use std::io::Write;
+    let mut file = File::create(filename).map_err(|e| format!("Cannot create file: {}", e))?;
+    for param in params {
+        writeln!(file, "{}", param).map_err(|e| format!("Write error: {}", e))?;
+    }
+    Ok(())
+}
+
+/// Load market data from file
+fn load_market_data(config: &Config) -> Result<MarketData, String> {
+    let file = File::open(&config.market.data_file)
+        .map_err(|e| format!("Cannot open market file: {}", e))?;
+    let reader = io::BufReader::new(file);
+    let mut prices = Vec::new();
+    
+    for line in reader.lines() {
+        if let Ok(l) = line {
+            if l.trim().is_empty() {
+                continue;
+            }
+            let parts: Vec<&str> = l.split_whitespace().collect();
+            if parts.len() >= 2 {
+                if let Ok(p) = parts[parts.len() - 1].parse::<f64>() {
+                    if p > 0.0 {
+                        prices.push(p.ln());
+                    }
                 }
             }
         }
     }
-
-    println!("\nMarket price history read, {} prices", prices.len());
     
-    if prices.len() <= max_lookback {
-        println!("Not enough prices for max_lookback");
-        process::exit(1);
+    if prices.len() <= config.market.max_lookback {
+        return Err("Not enough data for the requested lookback".to_string());
     }
-
-    let market_data = MarketData {
+    
+    Ok(MarketData {
         prices,
-        max_lookback,
-    };
+        max_lookback: config.market.max_lookback,
+    })
+}
 
-    let low_bounds = vec![2.0, 0.01, 0.0, 0.0];
-    let high_bounds = vec![max_lookback as f64, 99.0, max_thresh, max_thresh];
-    let mintrades = 20;
-
-    // Initialize StocBias
-    let mut stoc_bias_opt = StocBias::new(market_data.prices.len() - max_lookback);
-    if stoc_bias_opt.is_none() {
-        println!("Insufficient memory for StocBias");
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    
+    if args.len() < 2 {
+        eprintln!("Usage: try_diff_ev <config_file>");
+        eprintln!("Example: try_diff_ev config.toml");
         process::exit(1);
     }
+    
+    // Load configuration
+    let config = match Config::from_file(&args[1]) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Error loading config file: {}", e);
+            process::exit(1);
+        }
+    };
+    
+    println!("\n=== Configuration ===");
+    println!("Mode: {}", config.mode);
+    println!("Data file: {}", config.market.data_file.display());
+    println!("Max lookback: {}", config.market.max_lookback);
+    println!("Output dir: {}\n", config.output.output_dir.display());
+    
+    // Load market data
+    let market_data = match load_market_data(&config) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Error loading market data: {}", e);
+            process::exit(1);
+        }
+    };
+    
+    println!("Market price history loaded: {} prices\n", market_data.prices.len());
+    
+    // Create output directory if it doesn't exist
+    if let Err(e) = std::fs::create_dir_all(&config.output.output_dir) {
+        eprintln!("Error creating output directory: {}", e);
+        process::exit(1);
+    }
+    
+    match config.mode.as_str() {
+        "optimize" => run_optimization(&config, &market_data),
+        "predict" => run_prediction(&config, &market_data),
+        _ => {
+            eprintln!("Invalid mode: {}. Use 'optimize' or 'predict'.", config.mode);
+            process::exit(1);
+        }
+    }
+    
+    println!("\n✓ Completed successfully!");
+}
 
-    // Create a raw pointer to share StocBias between diff_ev and criter_wrapper
-    // This is safe because we control the lifetime and ensure no aliasing issues
+fn run_optimization(config: &Config, market_data: &MarketData) {
+    let low_bounds = vec![2.0, 0.01, 0.0, 0.0];
+    let high_bounds = vec![
+        config.market.max_lookback as f64,
+        99.0,
+        config.market.max_thresh,
+        config.market.max_thresh,
+    ];
+    
+    // Initialize StocBias
+    let mut stoc_bias_opt = StocBias::new(market_data.prices.len() - market_data.max_lookback);
+    if stoc_bias_opt.is_none() {
+        eprintln!("Insufficient memory for StocBias");
+        process::exit(1);
+    }
+    
     let sb_ptr = stoc_bias_opt.as_mut().unwrap() as *mut statn::estimators::StocBias;
-
-    // Create a closure that uses the raw pointer
     let criter_wrapper = |params: &[f64], mintrades: i32| -> f64 {
         unsafe {
             let mut sb_ref = Some(&mut *sb_ptr);
-            criter(params, mintrades, &market_data, &mut sb_ref)
+            criter(params, mintrades, market_data, &mut sb_ref)
         }
     };
-
-    // Run diff_ev - it will set collecting mode automatically
+    
+    println!("Running differential evolution optimization...");
     let result = diff_ev(
         criter_wrapper,
         4,
         1,
         100,
-        10000,
-        mintrades,
+        config.optimization.max_gens,
+        config.optimization.min_trades,
         10000000,
-        300,
+        config.optimization.popsize,
         0.2,
         0.2,
         0.3,
         &low_bounds,
         &high_bounds,
-        verbose,  // Use command-line argument
+        config.optimization.verbose,
         &mut stoc_bias_opt,
     );
-
-
-
-
+    
     match result {
         Ok(params) => {
-            println!("\n\nBest performance = {:.4}  Variables follow...", params[4]);
-            for i in 0..4 {
-                println!("\n  {:.4}", params[i]);
-            }
-
-            // Compute and print stochastic bias estimate
+            println!("\n=== OPTIMIZATION RESULTS ===");
+            println!("Best performance: {:.4}", params[4]);
+            println!("\nOptimal parameters:");
+            println!("  Long lookback:  {:.4}", params[0]);
+            println!("  Short %:        {:.4}", params[1]);
+            println!("  Short thresh:   {:.4}", params[2]);
+            println!("  Long thresh:    {:.4}", params[3]);
+            
             if let Some(ref sb) = stoc_bias_opt {
                 let (is_mean, oos_mean, bias) = sb.compute();
-                println!("\n\nVery rough estimates from differential evolution initialization...");
-                println!("\n  In-sample mean = {:.4}", is_mean);
-                println!("\n  Out-of-sample mean = {:.4}", oos_mean);
-                println!("\n  Bias = {:.4}", bias);
-                println!("\n  Expected = {:.4}", params[4] - bias);
+                println!("\nBias estimates:");
+                println!("  In-sample mean:     {:.4}", is_mean);
+                println!("  Out-of-sample mean: {:.4}", oos_mean);
+                println!("  Bias:               {:.4}", bias);
+                println!("  Expected return:    {:.4}", params[4] - bias);
             }
-
             
-            // Sensitivity
+            // Save parameters if specified
+            if let Some(ref params_file) = config.optimization.params_file {
+                let output_path = config.output.output_dir.join(params_file);
+                if let Err(e) = save_params_to_file(&output_path, &params[0..4]) {
+                    eprintln!("Error saving parameters: {}", e);
+                } else {
+                    println!("\nParameters saved to: {}", output_path.display());
+                }
+            }
+            
+            // Run sensitivity analysis
+            println!("\nRunning sensitivity analysis...");
             let _ = sensitivity(
-                |p, m| criter(p, m, &market_data, &mut None),
+                |p, m| criter(p, m, market_data, &mut None),
                 4,
                 1,
                 30,
                 80,
-                mintrades,
+                config.optimization.min_trades,
                 &params,
                 &low_bounds,
                 &high_bounds,
             );
+            println!("Sensitivity analysis saved to SENS.LOG");
         }
         Err(e) => {
-            println!("Error: {}", e);
+            eprintln!("Optimization error: {}", e);
+            process::exit(1);
         }
     }
+}
 
-    println!("\n\n Completed...");
+fn run_prediction(config: &Config, market_data: &MarketData) {
+    // Load parameters
+    let params_path = config.output.output_dir.join(&config.backtest.params_file);
+    let params = match load_parameters(&params_path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("Error loading parameters from {}: {}", params_path.display(), e);
+            process::exit(1);
+        }
+    };
+    
+    if params.len() < 4 {
+        eprintln!("Parameters file must contain at least 4 parameters");
+        process::exit(1);
+    }
+    
+    println!("=== LOADED PARAMETERS ===");
+    println!("  Long lookback:  {:.4}", params[0]);
+    println!("  Short %:        {:.4}", params[1]);
+    println!("  Short thresh:   {:.4}", params[2]);
+    println!("  Long thresh:    {:.4}", params[3]);
+    
+    // Generate signals
+    let result = generate_signals(
+        &market_data.prices,
+        (params[0] + 1.0e-10) as usize,
+        params[1],
+        params[2],
+        params[3],
+    );
+    
+    // Print last 20 signals
+    println!("\nLast 20 signals:");
+    let start = result.signals.len().saturating_sub(20);
+    for i in start..result.signals.len() {
+        let sig = match result.signals[i] {
+            1 => "BUY",
+            -1 => "SELL",
+            _ => "HOLD",
+        };
+        println!("{:>5}: price={:.4} -> {}", i, result.prices[i], sig);
+    }
+    
+    // Backtest the strategy
+    let stats = backtest_signals(
+        &result,
+        config.backtest.initial_budget,
+        config.backtest.transaction_cost_pct,
+    );
+    
+    println!("\n=== BACKTEST RESULTS ===");
+    println!("Initial Budget:    ${:.2}", stats.initial_budget);
+    println!("Final Budget:      ${:.2}", stats.final_budget);
+    println!("Total P&L:         ${:.2}", stats.total_pnl);
+    println!("ROI:               {:.2}%", stats.roi_percent);
+    println!("\nTrading Statistics:");
+    println!("  Total Trades:    {}", stats.num_trades);
+    println!("  Winning Trades:  {}", stats.num_wins);
+    println!("  Losing Trades:   {}", stats.num_losses);
+    println!("  Win Rate:        {:.2}%", stats.win_rate);
+    println!("  Total Costs:     ${:.2}", stats.total_costs);
+    println!("\nRisk Metrics:");
+    println!("  Max Drawdown:    {:.2}%", stats.max_drawdown);
+    println!("  Sharpe Ratio:    {:.4}", stats.sharpe_ratio);
+    
+    // Visualize signals
+    let chart_path = config.output.output_dir.join("signal_chart.png");
+    if let Err(e) = visualise_signals(&result, &chart_path) {
+        eprintln!("Failed to create chart: {}", e);
+    } else {
+        println!("\nSignal chart saved to: {}", chart_path.display());
+    }
 }

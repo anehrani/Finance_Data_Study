@@ -1,0 +1,17 @@
+# Trading System Configuration - Prediction Mode
+
+mode = "predict"
+
+[market]
+data_file = "../data/XAGUSD.txt"
+max_lookback = 100
+max_thresh = 100.0
+
+[backtest]
+params_file = "params.txt"
+initial_budget = 10000.0
+transaction_cost_pct = 0.1
+
+[output]
+output_dir = "."
+verbose = false
