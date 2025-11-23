@@ -30,101 +30,7 @@ struct Args {
     nreps: usize,
 }
 
-/// In-place quicksort for f64 slices
-fn quicksort(data: &mut [f64]) {
-    if data.len() <= 1 {
-        return;
-    }
-    quicksort_range(data, 0, data.len() - 1);
-}
-
-fn quicksort_range(data: &mut [f64], first: usize, last: usize) {
-    if first >= last {
-        return;
-    }
-
-    let split = data[(first + last) / 2];
-    let mut lower = first;
-    let mut upper = last;
-
-    loop {
-        while split > data[lower] {
-            lower += 1;
-        }
-        while split < data[upper] {
-            upper = upper.saturating_sub(1);
-        }
-
-        if lower == upper {
-            lower += 1;
-            upper = upper.saturating_sub(1);
-        } else if lower < upper {
-            data.swap(lower, upper);
-            lower += 1;
-            upper = upper.saturating_sub(1);
-        }
-
-        if lower > upper {
-            break;
-        }
-    }
-
-    if first < upper {
-        quicksort_range(data, first, upper);
-    }
-    if lower < last {
-        quicksort_range(data, lower, last);
-    }
-}
-
-use matlib::Mwc256;
-
-/// Compute indicator (linear slope) and target (price change)
-fn ind_targ(lookback: usize, lookahead: usize, x: &[f64]) -> (f64, f64) {
-    let mut slope = 0.0;
-    let mut denom = 0.0;
-
-    for i in 0..lookback {
-        let coef = 2.0 * (i as f64) / ((lookback - 1) as f64) - 1.0;
-        denom += coef * coef;
-        slope += coef * x[i];
-    }
-
-    let ind = slope / denom;
-    let targ = x[lookback - 1 + lookahead] - x[lookback - 1];
-
-    (ind, targ)
-}
-
-/// Find beta coefficient for simple linear regression
-fn find_beta(data: &[(f64, f64)]) -> (f64, f64) {
-    let n = data.len() as f64;
-    let mut xmean = 0.0;
-    let mut ymean = 0.0;
-
-    for (x, y) in data.iter() {
-        xmean += x;
-        ymean += y;
-    }
-
-    xmean /= n;
-    ymean /= n;
-
-    let mut xy = 0.0;
-    let mut xx = 0.0;
-
-    for (x, y) in data.iter() {
-        let x_dev = x - xmean;
-        let y_dev = y - ymean;
-        xy += x_dev * y_dev;
-        xx += x_dev * x_dev;
-    }
-
-    let beta = xy / (xx + 1e-60);
-    let constant = ymean - beta * xmean;
-
-    (beta, constant)
-}
+use matlib::{Mwc256, qsortd, ind_targ, find_beta};
 
 fn main() {
     let mut args = Args::parse();
@@ -169,7 +75,7 @@ fn main() {
         // Build dataset of indicators and targets
         let mut data = Vec::new();
         for i in 0..(args.nprices - args.lookback - args.lookahead + 1) {
-            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x[i..]);
+            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x, i + args.lookback - 1);
             data.push((ind, targ));
         }
 
@@ -240,7 +146,9 @@ fn main() {
     }
 
     // Sort and report median
-    quicksort(&mut save_t);
+    if !save_t.is_empty() {
+        qsortd(0, save_t.len() - 1, &mut save_t);
+    }
     let n_oos = {
         // Recalculate n_oos for the last replication (they should all be the same)
         let mut x = vec![0.0; args.nprices];
@@ -249,7 +157,7 @@ fn main() {
         }
         let mut data = Vec::new();
         for i in 0..(args.nprices - args.lookback - args.lookahead + 1) {
-            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x[i..]);
+            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x, i + args.lookback - 1);
             data.push((ind, targ));
         }
         let ncases = data.len();

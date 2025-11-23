@@ -24,12 +24,6 @@ pub fn unifrand() -> f64 {
 
 /// Generate a standard normal random variable using Box-Muller method
 pub fn normal() -> f64 {
-    loop {
-        let x1 = unifrand();
-        if x1 > 0.0 {
-            let x2 = unifrand();
-            return (-2.0 * x1.ln()).sqrt() * (2.0 * std::f64::consts::PI * x2).cos();
-        }
-    }
+    RNG.with(|rng| rng.borrow_mut().normal())
 }
 

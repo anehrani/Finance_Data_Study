@@ -47,6 +47,17 @@ impl Mwc256 {
         const MULT: f64 = 1.0 / 0xFFFFFFFFu32 as f64;
         MULT * (self.rand32() as f64)
     }
+
+    /// Generate a standard normal random variable using Box-Muller method
+    pub fn normal(&mut self) -> f64 {
+        loop {
+            let x1 = self.unifrand();
+            if x1 > 0.0 {
+                let x2 = self.unifrand();
+                return (-2.0 * x1.ln()).sqrt() * (2.0 * std::f64::consts::PI * x2).cos();
+            }
+        }
+    }
 }
 
 impl Default for Mwc256 {
@@ -88,5 +99,14 @@ mod tests {
         let val2 = rng2.rand32();
         
         assert_ne!(val1, val2);
+    }
+
+    #[test]
+    fn test_normal() {
+        let mut rng = Mwc256::with_seed(12345);
+        for _ in 0..1000 {
+            let val = rng.normal();
+            assert!(val.is_finite());
+        }
     }
 }
