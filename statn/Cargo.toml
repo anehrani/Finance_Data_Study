@@ -4,7 +4,6 @@ members = [
     "src/core/stats",
     "src/finance_tools",
     "src/indicators",
-    "try_indicators",
     "try_estimators",
     "try_cd_ma",
     "try_diff_ev",

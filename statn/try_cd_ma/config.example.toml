@@ -1,0 +1,36 @@
+# CD_MA Configuration File
+# Moving Average Crossover Indicator Selection
+
+# Increment to long-term lookback
+lookback_inc = 10
+
+# Number of long-term lookbacks to test
+n_long = 20
+
+# Number of short-term lookbacks to test
+n_short = 10
+
+# Alpha parameter for elastic net (0 < alpha <= 1)
+# alpha = 1.0 for Lasso, alpha = 0.0 for Ridge
+alpha = 0.5
+
+# Path to market data file (YYYYMMDD Price format)
+data_file = "market_data.txt"
+
+# Path to output results file
+output_file = "CD_MA.LOG"
+
+# Number of test cases (default: 252 = one trading year)
+n_test = 252
+
+# Number of cross-validation folds
+n_folds = 10
+
+# Number of lambda values to test in cross-validation
+n_lambdas = 50
+
+# Maximum iterations for coordinate descent
+max_iterations = 1000
+
+# Convergence tolerance
+tolerance = 1e-9
