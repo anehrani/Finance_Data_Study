@@ -15,6 +15,7 @@ members = [
     "cross_validation_mkt",
     "chooser",
     "per_what", "bound_mean", "bootstrap_rate", "conftest", "bnd_ret", "drawdown",
+    "montecarlo_permutation_test",
 ]
 
 [package]
