@@ -19,11 +19,11 @@ pub enum Commands {
         data_file: PathBuf,
         
         /// Maximum lookback period
-        #[arg(short = 'l', long, default_value_t = 100)]
+        #[arg(short = 'l', long, default_value_t = 6)]
         max_lookback: usize,
         
         /// Maximum threshold (×10000)
-        #[arg(short = 't', long, default_value_t = 100.0)]
+        #[arg(short = 't', long, default_value_t = 57.8112)]
         max_thresh: f64,
         
         /// Population size
@@ -43,7 +43,7 @@ pub enum Commands {
         output: PathBuf,
         
         /// Output directory
-        #[arg(short = 'D', long, default_value = ".")]
+        #[arg(short = 'D', long, default_value = "../results/")]
         output_dir: PathBuf,
         
         /// Enable verbose output
@@ -70,7 +70,7 @@ pub enum Commands {
         transaction_cost: f64,
         
         /// Output directory
-        #[arg(short = 'D', long, default_value = ".")]
+        #[arg(short = 'D', long, default_value = "../results/")]
         output_dir: PathBuf,
         
         /// Enable verbose output
