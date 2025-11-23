@@ -31,6 +31,9 @@ stats = { path = "src/core/stats" }
 indicators = { path = "src/indicators" }
 finance_tools = { path = "src/finance_tools" }
 
+[dev-dependencies]
+tempfile = "3.10"
+
 # [[bin]]
 # name = "boot"
 # path = "src/boot/main.rs"

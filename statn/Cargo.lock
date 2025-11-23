@@ -94,6 +94,9 @@ checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 [[package]]
 name = "bnd_ret"
 version = "0.1.0"
+dependencies = [
+ "stats",
+]
 
 [[package]]
 name = "bootstrap_rate"
@@ -667,6 +670,7 @@ name = "matlib"
 version = "0.1.0"
 dependencies = [
  "rand",
+ "stats",
 ]
 
 [[package]]
@@ -728,6 +732,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "rand",
+ "stats",
 ]
 
 [[package]]
@@ -1010,6 +1015,7 @@ dependencies = [
  "rand",
  "serde",
  "stats",
+ "tempfile",
  "toml",
 ]
 

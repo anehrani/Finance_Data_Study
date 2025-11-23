@@ -6,8 +6,7 @@ fn rand32m_seed(iseed: i32);
 fn unifrand() -> f64;
 fn normal() -> f64;
 fn qsortd(istart: usize, istop: usize, x: &mut [f64]);
-fn normal_cdf(z: f64) -> f64;
-fn inverse_normal_cdf(p: f64) -> f64;
+use stats::{normal_cdf, inverse_normal_cdf};
 
 // Bootstrap confidence interval functions from previous conversion
 fn boot_conf_pctile<F>(

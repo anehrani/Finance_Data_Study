@@ -1,8 +1,7 @@
 // External functions already implemented in Rust
 fn unifrand() -> f64;
 fn qsortd(first: usize, last: usize, data: &mut [f64]);
-fn normal_cdf(z: f64) -> f64;
-fn inverse_normal_cdf(p: f64) -> f64;
+use stats::{normal_cdf, inverse_normal_cdf};
 
 /// Compute confidence intervals using percentile method
 pub fn boot_conf_pctile<F>(

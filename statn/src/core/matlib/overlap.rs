@@ -1,22 +1,15 @@
 
-const PI: f64 = std::f64::consts::PI;
+pub use stats::normal_cdf;
 
-/*
-Normal CDF - Accurate to 7.5 e-8
-*/
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-pub fn normal_cdf(z: f64) -> f64 {
-    let zz = z.abs();
-    let pdf = (-0.5 * zz * zz).exp() / (2.0 * PI).sqrt();
-    let t = 1.0 / (1.0 + zz * 0.2316419);
-    let poly = ((((1.330274429 * t - 1.821255978) * t + 1.781477937) * t
-        - 0.356563782) * t
-        + 0.319381530)
-        * t;
-    if z > 0.0 {
-        1.0 - pdf * poly
-    } else {
-        pdf * poly
+    #[test]
+    fn test_normal_cdf_import() {
+        let z = 0.0;
+        let p = normal_cdf(z);
+        assert!((p - 0.5).abs() < 1e-7, "normal_cdf(0) should be 0.5, got {}", p);
     }
 }
 

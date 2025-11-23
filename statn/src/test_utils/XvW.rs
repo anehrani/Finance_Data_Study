@@ -1,22 +1,7 @@
 use std::env;
 use std::process;
 
-const PI: f64 = std::f64::consts::PI;
-
-/// Normal CDF - Accurate to 7.5e-8
-fn normal_cdf(z: f64) -> f64 {
-    let zz = z.abs();
-    let pdf = (-0.5 * zz * zz).exp() / (2.0 * PI).sqrt();
-    let t = 1.0 / (1.0 + zz * 0.2316419);
-    let poly = ((((1.330274429 * t - 1.821255978) * t + 1.781477937) * t - 0.356563782) * t
-        + 0.319381530)
-        * t;
-    if z > 0.0 {
-        1.0 - pdf * poly
-    } else {
-        pdf * poly
-    }
-}
+use stats::normal_cdf;
 
 /// Random number generator (Marsaglia MWC256)
 struct Rng {
