@@ -31,6 +31,27 @@ pub struct TradeStats {
     pub budget_history: Vec<f64>,
     /// History of positions (1 = long, -1 = short, 0 = flat).
     pub position_history: Vec<i32>,
+    /// Detailed log of all trades.
+    pub trades: Vec<TradeLog>,
+}
+
+/// Detailed information about a single trade.
+#[derive(Debug, Clone)]
+pub struct TradeLog {
+    /// Index where the trade was opened.
+    pub entry_index: usize,
+    /// Price at which the trade was opened.
+    pub entry_price: f64,
+    /// Index where the trade was closed.
+    pub exit_index: usize,
+    /// Price at which the trade was closed.
+    pub exit_price: f64,
+    /// Type of trade: "LONG" or "SHORT".
+    pub trade_type: String,
+    /// Profit/Loss for this trade.
+    pub pnl: f64,
+    /// Return percentage for this trade.
+    pub return_pct: f64,
 }
 
 /// Backtest a trading strategy based on generated signals.
@@ -63,6 +84,10 @@ pub fn backtest_signals(
     let mut budget_history = Vec::with_capacity(result.prices.len());
     let mut position_history = Vec::with_capacity(result.prices.len());
     let mut returns = Vec::new();
+    let mut trades = Vec::new();
+    
+    // Track trade entry details
+    let mut current_entry_idx = 0;
 
     for i in 0..result.prices.len() {
         let price = result.prices[i].exp(); // Convert from log space to actual price
@@ -80,6 +105,7 @@ pub fn backtest_signals(
                 total_costs += cost;
                 budget -= cost;
                 entry_price = price;
+                current_entry_idx = i;
                 position = 1;
                 num_trades += 1;
             }
@@ -89,6 +115,7 @@ pub fn backtest_signals(
                 total_costs += cost;
                 budget -= cost;
                 entry_price = price;
+                current_entry_idx = i;
                 position = -1;
                 num_trades += 1;
             }
@@ -107,11 +134,23 @@ pub fn backtest_signals(
                 }
                 returns.push(pnl / budget);
                 
+                // Record trade
+                trades.push(TradeLog {
+                    entry_index: current_entry_idx,
+                    entry_price,
+                    exit_index: i,
+                    exit_price: price,
+                    trade_type: "LONG".to_string(),
+                    pnl,
+                    return_pct: (price / entry_price - 1.0) * 100.0,
+                });
+
                 // Open short position
                 let cost2 = budget * transaction_cost_pct / 100.0;
                 total_costs += cost2;
                 budget -= cost2;
                 entry_price = price;
+                current_entry_idx = i;
                 position = -1;
                 num_trades += 2;
             }
@@ -130,11 +169,23 @@ pub fn backtest_signals(
                 }
                 returns.push(pnl / budget);
                 
+                // Record trade
+                trades.push(TradeLog {
+                    entry_index: current_entry_idx,
+                    entry_price,
+                    exit_index: i,
+                    exit_price: price,
+                    trade_type: "SHORT".to_string(),
+                    pnl,
+                    return_pct: (entry_price / price - 1.0) * 100.0,
+                });
+
                 // Open long position
                 let cost2 = budget * transaction_cost_pct / 100.0;
                 total_costs += cost2;
                 budget -= cost2;
                 entry_price = price;
+                current_entry_idx = i;
                 position = 1;
                 num_trades += 2;
             }
@@ -183,6 +234,21 @@ pub fn backtest_signals(
             num_losses += 1;
         }
         returns.push(pnl / budget);
+        
+        trades.push(TradeLog {
+            entry_index: current_entry_idx,
+            entry_price,
+            exit_index: result.prices.len() - 1,
+            exit_price: final_price,
+            trade_type: if position == 1 { "LONG".to_string() } else { "SHORT".to_string() },
+            pnl,
+            return_pct: if position == 1 { 
+                (final_price / entry_price - 1.0) * 100.0 
+            } else { 
+                (entry_price / final_price - 1.0) * 100.0 
+            },
+        });
+        
         num_trades += 1;
     }
     
@@ -224,5 +290,6 @@ pub fn backtest_signals(
         sharpe_ratio,
         budget_history,
         position_history,
+        trades,
     }
 }

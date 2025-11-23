@@ -1,5 +1,6 @@
 //! Visualization module for plotting trading signals.
 
+use crate::backtest::TradeStats;
 use crate::signals::SignalResult;
 use plotters::prelude::*;
 use std::path::Path;
@@ -15,6 +16,7 @@ use std::path::Path;
 /// * `output_path` - Path where the chart PNG will be saved
 pub fn visualise_signals<P: AsRef<Path>>(
     result: &SignalResult,
+    stats: Option<&TradeStats>,
     output_path: P,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let root = BitMapBackend::new(output_path.as_ref(), (1280, 720)).into_drawing_area();
@@ -28,7 +30,16 @@ pub fn visualise_signals<P: AsRef<Path>>(
         .margin(10)
         .x_label_area_size(40)
         .y_label_area_size(60)
-        .build_cartesian_2d(0usize..result.prices.len(), min_price..max_price)?;
+        .right_y_label_area_size(60)
+        .build_cartesian_2d(0usize..result.prices.len(), min_price..max_price)?
+        .set_secondary_coord(
+            0usize..result.prices.len(),
+            stats.map_or(0.0..1.0, |s| {
+                let min_w = s.budget_history.iter().cloned().fold(f64::INFINITY, f64::min);
+                let max_w = s.budget_history.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                min_w..max_w
+            }),
+        );
 
     chart.configure_mesh().disable_mesh().draw()?;
 
@@ -70,6 +81,17 @@ pub fn visualise_signals<P: AsRef<Path>>(
     )?
     .label("SELL")
     .legend(|(x, y)| Circle::new((x, y), 5, ShapeStyle::from(&RED).filled()));
+
+    // Plot wealth curve if stats provided
+    if let Some(s) = stats {
+        chart
+            .draw_secondary_series(LineSeries::new(
+                s.budget_history.iter().enumerate().map(|(i, w)| (i, *w)),
+                &MAGENTA,
+            ))?
+            .label("Wealth")
+            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &MAGENTA));
+    }
 
     chart.configure_series_labels().border_style(&BLACK).draw()?;
     Ok(())

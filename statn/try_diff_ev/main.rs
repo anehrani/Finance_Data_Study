@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::Write;
 use std::process;
 
 use statn::estimators::sensitivity::sensitivity;
@@ -252,10 +254,53 @@ fn main() {
             println!("  Max Drawdown:    {:.2}%", stats.max_drawdown);
             println!("  Sharpe Ratio:    {:.4}", stats.sharpe_ratio);
             
-            // Visualize (full data with split marker?)
-            // For now, visualize the test period
+            // Write trade log to file
+            let log_path = output_dir.join("trade_log.txt");
+            match File::create(&log_path) {
+                Ok(mut file) => {
+                    writeln!(file, "=== TRADE LOG ===").unwrap();
+                    writeln!(file, "{:<5} {:<8} {:<10} {:<10} {:<10} {:<10} {:<8}", 
+                             "Type", "Entry Idx", "Entry Price", "Exit Idx", "Exit Price", "P&L", "Return").unwrap();
+                    writeln!(file, "{}", "-".repeat(70)).unwrap();
+                    
+                    for trade in &stats.trades {
+                        writeln!(file, "{:<5} {:<8} {:<10.4} {:<10} {:<10.4} {:<10.2} {:>7.2}%",
+                                 trade.trade_type,
+                                 trade.entry_index + split_idx,
+                                 trade.entry_price,
+                                 trade.exit_index + split_idx,
+                                 trade.exit_price,
+                                 trade.pnl,
+                                 trade.return_pct).unwrap();
+                    }
+                    println!("\n✓ Trade log saved to: {}", log_path.display());
+                }
+                Err(e) => eprintln!("Failed to write trade log: {}", e),
+            }
+
+            // Print detailed trade log if verbose
+            if verbose {
+                println!("\n=== TRADE LOG ===");
+                println!("{:<5} {:<8} {:<10} {:<10} {:<10} {:<10} {:<8}", 
+                         "Type", "Entry Idx", "Entry Price", "Exit Idx", "Exit Price", "P&L", "Return");
+                println!("{}", "-".repeat(70));
+                
+                for trade in &stats.trades {
+                    println!("{:<5} {:<8} {:<10.4} {:<10} {:<10.4} {:<10.2} {:>7.2}%",
+                             trade.trade_type,
+                             trade.entry_index + split_idx, // Adjust index to global
+                             trade.entry_price,
+                             trade.exit_index + split_idx, // Adjust index to global
+                             trade.exit_price,
+                             trade.pnl,
+                             trade.return_pct);
+                }
+                println!("{}", "-".repeat(70));
+            }
+
+            // Visualize
             let chart_path = output_dir.join("signal_chart.png");
-            if let Err(e) = visualise_signals(&test_result, &chart_path) {
+            if let Err(e) = visualise_signals(&test_result, Some(&stats), &chart_path) {
                 eprintln!("Failed to create chart: {}", e);
             } else {
                 println!("\n✓ Chart saved to: {}", chart_path.display());
