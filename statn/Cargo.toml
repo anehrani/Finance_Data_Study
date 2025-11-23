@@ -14,6 +14,7 @@ members = [
     "overlap",
     "cross_validation_mkt",
     "chooser",
+    "per_what",
 ]
 
 [package]
