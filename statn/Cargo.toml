@@ -35,9 +35,9 @@ finance_tools = { path = "src/finance_tools" }
 [dev-dependencies]
 tempfile = "3.10"
 
-# [[bin]]
-# name = "boot"
-# path = "src/boot/main.rs"
+#[[bin]]
+#name = "try_cd_ma"
+#path = "try_cd_ma/main.rs"
 
 # [[bin]]
 # name = "cscv"

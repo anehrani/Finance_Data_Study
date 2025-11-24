@@ -10,15 +10,15 @@ use std::path::PathBuf;
 pub struct Config {
 
     /// Increment to long-term lookback
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 6)]
     pub lookback_inc: usize,
     
     /// Number of long-term lookbacks to test
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 6)]
     pub n_long: usize,
     
     /// Number of short-term lookbacks to test
-    #[arg(long, default_value_t = 5)]
+    #[arg(long, default_value_t = 3)]
     pub n_short: usize,
     
     /// Alpha parameter for elastic net (0-1]
@@ -34,7 +34,7 @@ pub struct Config {
     pub output_file: PathBuf,
     
     /// Number of test cases (default: 252 = one year)
-    #[arg(long, default_value_t = 252)]
+    #[arg(long, default_value_t = 100)]
     pub n_test: usize,
     
     /// Number of cross-validation folds

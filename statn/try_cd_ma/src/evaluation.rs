@@ -75,6 +75,11 @@ pub fn write_results<P: AsRef<Path>>(
     evaluation: &EvaluationResult,
     specs: &[IndicatorSpec],
 ) -> Result<()> {
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = path.as_ref().parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    
     let mut file = OpenOptions::new()
         .create(true)
         .write(true)
