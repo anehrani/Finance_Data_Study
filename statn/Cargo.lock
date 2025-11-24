@@ -1213,6 +1213,7 @@ dependencies = [
 name = "try_diff_ev"
 version = "0.1.0"
 dependencies = [
+ "backtesting",
  "clap",
  "finance_tools",
  "indicators",

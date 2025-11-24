@@ -20,3 +20,4 @@ finance_tools = { path = "../src/finance_tools" }
 indicators = { path = "../src/indicators" }
 statn = { path = "../" }
 plotters = "0.3.6"
+backtesting = { path = "../src/backtesting" }
