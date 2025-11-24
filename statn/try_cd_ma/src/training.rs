@@ -97,3 +97,10 @@ mod tests {
         assert_eq!(result.lambda, 0.0);
     }
 }
+
+/// Save model to file
+pub fn save_model<P: AsRef<std::path::Path>>(model: &CoordinateDescent, path: P) -> Result<()> {
+    let file = std::fs::File::create(path)?;
+    serde_json::to_writer(file, model)?;
+    Ok(())
+}

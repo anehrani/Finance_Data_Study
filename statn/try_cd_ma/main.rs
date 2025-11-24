@@ -74,6 +74,12 @@ fn main() -> Result<()> {
     )?;
     
     // Write results
+
+    // Save model
+    println!("Saving model to model.json...");
+    training::save_model(&training_result.model, "model.json")?;
+    
+    // Write results
     write_results(
         &config.output_file,
         &config,

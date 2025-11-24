@@ -3,7 +3,10 @@ use std::io::Write;
 
 const RESULTS: bool = false;
 
+use serde::{Serialize, Deserialize};
+
 /// Coordinate Descent model for elastic net regularized regression
+#[derive(Serialize, Deserialize)]
 pub struct CoordinateDescent {
     // Public fields
     pub ok: bool,
