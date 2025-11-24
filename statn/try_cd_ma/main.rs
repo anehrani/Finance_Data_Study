@@ -1,15 +1,17 @@
 use anyhow::Result;
+use clap::Parser;
 use try_cd_ma::*;
 
 fn main() -> Result<()> {
     println!("CD_MA - Moving Average Crossover Indicator Selection\n");
     
     // Load configuration
-    let config = Config::load()?;
+    let config = Config::parse();
+    config.validate()?;
     
     // Load market data
     println!("Loading market data...");
-    let prices = load_prices(&config.data_file)
+    let prices = load_prices(std::path::Path::new(&config.data_file))
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     
     // Split into training and test sets
