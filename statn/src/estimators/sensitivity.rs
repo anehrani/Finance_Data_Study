@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::{self, Write};
+use std::io;
 
 /// Compute and print parameter sensitivity curves
 ///
@@ -34,7 +33,7 @@ pub fn sensitivity<F>(
 where
     F: FnMut(&[f64], i32) -> f64,
 {
-    let mut fp = File::create("SENS.LOG")?;
+    let mut buffer = String::new();
     let mut params = best.to_vec();
     let mut vals = vec![0.0; npoints];
 
@@ -48,12 +47,13 @@ where
 
         if ivar < nints {
             // Integer parameter
+            use std::fmt::Write;
             writeln!(
-                fp,
+                buffer,
                 "\n\nSensitivity curve for integer parameter {} (optimum={})",
                 ivar + 1,
                 (best[ivar] + 1.0e-10) as i32
-            )?;
+            ).unwrap();
 
             let label_frac =
                 (high_bounds[ivar] - low_bounds[ivar] + 0.99999999) / (npoints as f64 - 1.0);
@@ -73,20 +73,21 @@ where
 
             for ipoint in 0..npoints {
                 let ival = (low_bounds[ivar] + ipoint as f64 * label_frac) as i32;
-                write!(fp, "\n{:6}|", ival)?;
+                write!(buffer, "\n{:6}|", ival).unwrap();
                 let k = (vals[ipoint] * hist_frac) as i32;
                 for _ in 0..k {
-                    write!(fp, "*")?;
+                    write!(buffer, "*").unwrap();
                 }
             }
         } else {
             // Real parameter
+            use std::fmt::Write;
             writeln!(
-                fp,
+                buffer,
                 "\n\nSensitivity curve for real parameter {} (optimum={:.4})",
                 ivar + 1,
                 best[ivar]
-            )?;
+            ).unwrap();
 
             let label_frac = (high_bounds[ivar] - low_bounds[ivar]) / (npoints as f64 - 1.0);
 
@@ -105,14 +106,14 @@ where
 
             for ipoint in 0..npoints {
                 let rval = low_bounds[ivar] + ipoint as f64 * label_frac;
-                write!(fp, "\n{:10.3}|", rval)?;
+                write!(buffer, "\n{:10.3}|", rval).unwrap();
                 let k = (vals[ipoint] * hist_frac) as i32;
                 for _ in 0..k {
-                    write!(fp, "*")?;
+                    write!(buffer, "*").unwrap();
                 }
             }
         }
     }
 
-    Ok(())
+    crate::core::io::write::write_file("SENS.LOG", buffer)
 }

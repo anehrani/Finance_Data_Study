@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::Write;
+
 
 /// Compute and print parameter correlation information
 ///
@@ -14,7 +13,7 @@ use std::io::Write;
 ///
 /// # Returns
 /// `Ok(())` on success, `Err(String)` on failure
-pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
+pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
     let ncases = data.len() / (nparams + 1);
 
     if nparams < 2 {
@@ -31,9 +30,8 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
         nc_kept = ncases;
     }
 
-    // Open log file
-    let mut fp = File::create("PARAMCOR.LOG")
-        .map_err(|e| format!("Failed to create PARAMCOR.LOG: {}", e))?;
+    // Open log file buffer
+    let mut buffer = String::new();
 
     // Find the best individual (maximum function value)
     let mut ibest = 0;
@@ -106,8 +104,9 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
     coefs.copy_from_slice(&svd);
 
     // Print coefficients
+    use std::fmt::Write;
     writeln!(
-        fp,
+        buffer,
         "Coefficients fitting performance to parameters, linear first, then quadratic, then mixed"
     )
     .map_err(|e| format!("Write error: {}", e))?;
@@ -121,9 +120,9 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
             line.push_str(&format!(" {:11.3e}", coefs[coef_idx]));
             coef_idx += 1;
         }
-        writeln!(fp, "{}", line).map_err(|e| format!("Write error: {}", e))?;
+        writeln!(buffer, "{}", line).map_err(|e| format!("Write error: {}", e))?;
     }
-    writeln!(fp, "Constant: {:.3e}", coefs[coef_idx])
+    writeln!(buffer, "Constant: {:.3e}", coefs[coef_idx])
         .map_err(|e| format!("Write error: {}", e))?;
 
     // Build Hessian matrix
@@ -143,8 +142,8 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
     }
 
     // Print original Hessian
-    writeln!(fp, "\n\nHessian before adjustment").map_err(|e| format!("Write error: {}", e))?;
-    print_matrix(&mut fp, &hessian, nparams)?;
+    writeln!(buffer, "\n\nHessian before adjustment").map_err(|e| format!("Write error: {}", e))?;
+    print_matrix(&mut buffer, &hessian, nparams)?;
 
     // Adjust Hessian: zero out non-positive diagonals and their rows/columns
     for j in 0..nparams {
@@ -176,18 +175,18 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
 
     // Print adjusted Hessian
     writeln!(
-        fp,
+        buffer,
         "\n\nHessian after adjustment to encourage nonnegative eigenvalues"
     )
     .map_err(|e| format!("Write error: {}", e))?;
-    print_matrix(&mut fp, &hessian, nparams)?;
+    print_matrix(&mut buffer, &hessian, nparams)?;
 
     // Compute eigenstructure
     let (evals, evect) = eigen_decomposition(&hessian, nparams)?;
 
     // Print eigenvalues and eigenvectors
     writeln!(
-        fp,
+        buffer,
         "\n\nEigenvalues (top row) with corresponding vectors below each"
     )
     .map_err(|e| format!("Write error: {}", e))?;
@@ -196,14 +195,14 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
     for j in 0..nparams {
         line.push_str(&format!(" {:11.3e}", evals[j]));
     }
-    writeln!(fp, "{}", line).map_err(|e| format!("Write error: {}", e))?;
+    writeln!(buffer, "{}", line).map_err(|e| format!("Write error: {}", e))?;
 
     for j in 0..nparams {
         let mut line = String::new();
         for k in 0..nparams {
             line.push_str(&format!(" {:11.3e}", evect[j * nparams + k]));
         }
-        writeln!(fp, "{}", line).map_err(|e| format!("Write error: {}", e))?;
+        writeln!(buffer, "{}", line).map_err(|e| format!("Write error: {}", e))?;
     }
 
     // Compute generalized inverse of Hessian
@@ -221,43 +220,43 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
         }
     }
 
-    writeln!(fp, "\n\nGeneralized inverse of modified Hessian")
+    writeln!(buffer, "\n\nGeneralized inverse of modified Hessian")
         .map_err(|e| format!("Write error: {}", e))?;
-    print_matrix(&mut fp, &hessian_inv, nparams)?;
+    print_matrix(&mut buffer, &hessian_inv, nparams)?;
 
     // Print parameter variation and correlations
     writeln!(
-        fp,
+        buffer,
         "\n\nEstimated parameter variation and correlations\n"
     )
     .map_err(|e| format!("Write error: {}", e))?;
     writeln!(
-        fp,
+        buffer,
         "Variation very roughly indicates how much the parameter can change"
     )
     .map_err(|e| format!("Write error: {}", e))?;
     writeln!(
-        fp,
+        buffer,
         "RELATIVE to the others without having a huge impact on performance.\n"
     )
     .map_err(|e| format!("Write error: {}", e))?;
     writeln!(
-        fp,
+        buffer,
         "A strong positive correlation between A and B means that an increase"
     )
     .map_err(|e| format!("Write error: {}", e))?;
     writeln!(
-        fp,
+        buffer,
         "in parameter A can be somewhat offset by an increase in parameter B.\n"
     )
     .map_err(|e| format!("Write error: {}", e))?;
     writeln!(
-        fp,
+        buffer,
         "A strong negative correlation between A and B means that an increase"
     )
     .map_err(|e| format!("Write error: {}", e))?;
     writeln!(
-        fp,
+        buffer,
         "in parameter A can be somewhat offset by a decrease in parameter B.\n"
     )
     .map_err(|e| format!("Write error: {}", e))?;
@@ -278,7 +277,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
     for i in 0..nparams {
         header.push_str(&format!("      Param {}", i + 1));
     }
-    writeln!(fp, "{}", header).map_err(|e| format!("Write error: {}", e))?;
+    writeln!(buffer, "{}", header).map_err(|e| format!("Write error: {}", e))?;
 
     let mut var_line = "  Variation-->".to_string();
     for i in 0..nparams {
@@ -289,7 +288,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
         };
         var_line.push_str(&format!(" {:12.3}", d));
     }
-    writeln!(fp, "{}", var_line).map_err(|e| format!("Write error: {}", e))?;
+    writeln!(buffer, "{}", var_line).map_err(|e| format!("Write error: {}", e))?;
 
     // Print correlations
     for i in 0..nparams {
@@ -315,7 +314,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
                 line.push_str("        -----");
             }
         }
-        writeln!(fp, "{}", line).map_err(|e| format!("Write error: {}", e))?;
+        writeln!(buffer, "{}", line).map_err(|e| format!("Write error: {}", e))?;
     }
 
     // Print sensitivity vectors if applicable
@@ -331,21 +330,21 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
 
         if let Some(k) = min_pos_idx {
             writeln!(
-                fp,
+                buffer,
                 "\n\nDirections of maximum and minimum sensitivity"
             )
             .map_err(|e| format!("Write error: {}", e))?;
             writeln!(
-                fp,
+                buffer,
                 "Moving in the direction of maximum sensitivity causes the most change in performance."
             )
             .map_err(|e| format!("Write error: {}", e))?;
             writeln!(
-                fp,
+                buffer,
                 "Moving in the direction of minimum sensitivity causes the least change in performance.\n"
             )
             .map_err(|e| format!("Write error: {}", e))?;
-            writeln!(fp, "                     Max        Min\n")
+            writeln!(buffer, "                     Max        Min\n")
                 .map_err(|e| format!("Write error: {}", e))?;
 
             let mut lscale = 0.0;
@@ -372,7 +371,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
                     0.0
                 };
                 writeln!(
-                    fp,
+                    buffer,
                     "       Param {} {:10.3} {:10.3}",
                     i + 1,
                     max_val,
@@ -383,21 +382,23 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<(), String> {
         }
     }
 
-    Ok(())
+    Ok(buffer)
 }
 
 /// Helper function to print a matrix
+/// Helper function to print a matrix
 pub fn print_matrix(
-    fp: &mut File,
+    buffer: &mut String,
     matrix: &[f64],
     n: usize,
 ) -> Result<(), String> {
+    use std::fmt::Write;
     for j in 0..n {
         let mut line = String::new();
         for k in 0..n {
             line.push_str(&format!(" {:11.3e}", matrix[j * n + k]));
         }
-        writeln!(fp, "{}", line).map_err(|e| format!("Write error: {}", e))?;
+        writeln!(buffer, "{}", line).map_err(|e| format!("Write error: {}", e))?;
     }
     Ok(())
 }

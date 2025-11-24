@@ -166,6 +166,7 @@ dependencies = [
  "clap",
  "matlib",
  "rand",
+ "statn",
 ]
 
 [[package]]
@@ -343,6 +344,7 @@ dependencies = [
  "matlib",
  "rand",
  "rand_distr",
+ "statn",
 ]
 
 [[package]]

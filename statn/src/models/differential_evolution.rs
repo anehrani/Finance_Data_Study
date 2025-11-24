@@ -626,7 +626,9 @@ where
     // Wait, at end of loop we swap. So the just-created generation is now in pop1.
     // So we pass pop1.
     
-    let _ = paramcor(&pop1, nvars); // Ignore result? C++ returns ret_code = -1 if fails.
+    if let Ok(log_content) = paramcor(&pop1, nvars) {
+        let _ = crate::core::io::write::write_file("PARAMCOR.LOG", log_content);
+    }
     
     Ok(best)
 }

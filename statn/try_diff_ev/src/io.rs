@@ -1,7 +1,7 @@
 //! I/O utilities for loading and saving data.
 
 use std::fs::File;
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead};
 use std::path::Path;
 
 /// Market data structure.
@@ -123,15 +123,15 @@ pub fn load_parameters<P: AsRef<Path>>(path: P) -> Result<Vec<f64>, String> {
 /// # Returns
 /// Result indicating success or error
 pub fn save_parameters<P: AsRef<Path>>(path: P, params: &[f64]) -> Result<(), String> {
-    let mut file = File::create(path.as_ref())
-        .map_err(|e| format!("Cannot create file '{}': {}", path.as_ref().display(), e))?;
-    
+    let mut buffer = String::new();
+    use std::fmt::Write;
     for param in params {
-        writeln!(file, "{}", param)
+        writeln!(buffer, "{}", param)
             .map_err(|e| format!("Write error: {}", e))?;
     }
     
-    Ok(())
+    statn::core::io::write::write_file(path, buffer)
+        .map_err(|e| format!("Failed to write parameters: {}", e))
 }
 
 #[cfg(test)]

@@ -7,6 +7,7 @@ edition = "2021"
 rand = "0.8"
 rand_distr = "0.4"
 matlib = { path = "../src/core/matlib" }
+statn = { path = "../" }
 
 [[bin]]
 name = "drawdown"
