@@ -1,6 +1,4 @@
 use std::env;
-use std::fs::File;
-use std::io::Write;
 use std::process;
 
 use ::drawdown::*;
@@ -61,16 +59,17 @@ fn main() {
         process::exit(1);
     }
 
-    // Open output file
-    let mut fp = File::create("DRAWDOWN.LOG").expect("Cannot open DRAWDOWN.LOG file for writing!");
+    // Open output buffer
+    let mut buffer = String::new();
 
-    writeln!(fp, "\nChanges = {}", n_changes).unwrap();
-    writeln!(fp, "Trades = {}", n_trades).unwrap();
-    writeln!(fp, "Win probability = {:.4}", win_prob).unwrap();
-    writeln!(fp, "DD bound confidence = {:.4}", bound_conf).unwrap();
-    writeln!(fp, "Bootstrap reps = {}", bootstrap_reps).unwrap();
-    writeln!(fp, "Quantile reps = {}", quantile_reps).unwrap();
-    writeln!(fp, "Test reps = {}", test_reps).unwrap();
+    use std::fmt::Write;
+    writeln!(buffer, "\nChanges = {}", n_changes).unwrap();
+    writeln!(buffer, "Trades = {}", n_trades).unwrap();
+    writeln!(buffer, "Win probability = {:.4}", win_prob).unwrap();
+    writeln!(buffer, "DD bound confidence = {:.4}", bound_conf).unwrap();
+    writeln!(buffer, "Bootstrap reps = {}", bootstrap_reps).unwrap();
+    writeln!(buffer, "Quantile reps = {}", quantile_reps).unwrap();
+    writeln!(buffer, "Test reps = {}", test_reps).unwrap();
 
     // Allocate memory
     let mut changes = Vec::with_capacity(n_changes);
@@ -240,48 +239,52 @@ fn main() {
                  count_incorrect_drawdown_10 as f64 / (POP_MULT * itest) as f64,
                  count_correct_10 as f64 / (POP_MULT * itest) as f64);
 
-        // Write results to file
+        // Write results to buffer
         if itest % 100 == 0 || itest == test_reps {
-            writeln!(fp, "\n\n").unwrap();
-            writeln!(fp, "\nMean return worse (Ratio)").unwrap();
-            writeln!(fp, "  Actual       Incorrect").unwrap();
-            writeln!(fp, "   0.001   {:.5} ({:.2})",
+            writeln!(buffer, "\n\n").unwrap();
+            writeln!(buffer, "\nMean return worse (Ratio)").unwrap();
+            writeln!(buffer, "  Actual       Incorrect").unwrap();
+            writeln!(buffer, "   0.001   {:.5} ({:.2})",
                      count_incorrect_meanret_001 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_meanret_001 as f64 / (POP_MULT * itest) as f64) / 0.001).unwrap();
-            writeln!(fp, "   0.01    {:.5} ({:.2})",
+            writeln!(buffer, "   0.01    {:.5} ({:.2})",
                      count_incorrect_meanret_01 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_meanret_01 as f64 / (POP_MULT * itest) as f64) / 0.01).unwrap();
-            writeln!(fp, "   0.05    {:.5} ({:.2})",
+            writeln!(buffer, "   0.05    {:.5} ({:.2})",
                      count_incorrect_meanret_05 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_meanret_05 as f64 / (POP_MULT * itest) as f64) / 0.05).unwrap();
-            writeln!(fp, "   0.1     {:.5} ({:.2})",
+            writeln!(buffer, "   0.1     {:.5} ({:.2})",
                      count_incorrect_meanret_10 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_meanret_10 as f64 / (POP_MULT * itest) as f64) / 0.1).unwrap();
 
-            writeln!(fp, "\nDrawdown worse (Ratio)").unwrap();
-            writeln!(fp, "  Actual     Incorrect          Correct").unwrap();
-            writeln!(fp, "   0.001   {:.5} ({:.2})  {:.5} ({:.2})",
+            writeln!(buffer, "\nDrawdown worse (Ratio)").unwrap();
+            writeln!(buffer, "  Actual     Incorrect          Correct").unwrap();
+            writeln!(buffer, "   0.001   {:.5} ({:.2})  {:.5} ({:.2})",
                      count_incorrect_drawdown_001 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_drawdown_001 as f64 / (POP_MULT * itest) as f64) / 0.001,
                      count_correct_001 as f64 / (POP_MULT * itest) as f64,
                      (count_correct_001 as f64 / (POP_MULT * itest) as f64) / 0.001).unwrap();
-            writeln!(fp, "   0.01    {:.5} ({:.2})  {:.5} ({:.2})",
+            writeln!(buffer, "   0.01    {:.5} ({:.2})  {:.5} ({:.2})",
                      count_incorrect_drawdown_01 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_drawdown_01 as f64 / (POP_MULT * itest) as f64) / 0.01,
                      count_correct_01 as f64 / (POP_MULT * itest) as f64,
                      (count_correct_01 as f64 / (POP_MULT * itest) as f64) / 0.01).unwrap();
-            writeln!(fp, "   0.05    {:.5} ({:.2})  {:.5} ({:.2})",
+            writeln!(buffer, "   0.05    {:.5} ({:.2})  {:.5} ({:.2})",
                      count_incorrect_drawdown_05 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_drawdown_05 as f64 / (POP_MULT * itest) as f64) / 0.05,
                      count_correct_05 as f64 / (POP_MULT * itest) as f64,
                      (count_correct_05 as f64 / (POP_MULT * itest) as f64) / 0.05).unwrap();
-            writeln!(fp, "   0.1     {:.5} ({:.2})  {:.5} ({:.2})",
+            writeln!(buffer, "   0.1     {:.5} ({:.2})  {:.5} ({:.2})",
                      count_incorrect_drawdown_10 as f64 / (POP_MULT * itest) as f64,
                      (count_incorrect_drawdown_10 as f64 / (POP_MULT * itest) as f64) / 0.1,
                      count_correct_10 as f64 / (POP_MULT * itest) as f64,
                      (count_correct_10 as f64 / (POP_MULT * itest) as f64) / 0.10).unwrap();
+            
+            // Write to file (overwrite with current buffer)
+            statn::core::io::write::write_file("DRAWDOWN.LOG", &buffer).expect("Failed to write DRAWDOWN.LOG");
         }
     }
 
     println!("\nResults written to DRAWDOWN.LOG");
+
 }

@@ -16,8 +16,7 @@ pub fn run_training_bias(
     );
 
     // Initialize RNG
-    let mut rng = Rng::new();
-    rng.seed(123456789);
+    let mut rng = Rng::with_seed(123456789);
 
     let mut is_mean = 0.0;
     let mut oos_mean = 0.0;
@@ -35,10 +34,10 @@ pub fn run_training_bias(
             }
             x[i] = x[i - 1]
                 + trend
-                + rng.uniform()
-                + rng.uniform()
-                - rng.uniform()
-                - rng.uniform();
+                + rng.unifrand()
+                + rng.unifrand()
+                - rng.unifrand()
+                - rng.unifrand();
         }
 
         // Compute optimal parameters, evaluate return with same dataset
@@ -57,10 +56,10 @@ pub fn run_training_bias(
             }
             x_oos[i] = x_oos[i - 1]
                 + trend
-                + rng.uniform()
-                + rng.uniform()
-                - rng.uniform()
-                - rng.uniform();
+                + rng.unifrand()
+                + rng.unifrand()
+                - rng.unifrand()
+                - rng.unifrand();
         }
 
         // Test the OOS set

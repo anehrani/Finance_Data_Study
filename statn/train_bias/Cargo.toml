@@ -8,5 +8,5 @@ name = "train_bias"
 path = "main.rs"
 
 [dependencies]
-
+matlib = { path = "../src/core/matlib" }
 [dev-dependencies]

@@ -10,3 +10,5 @@ path = "main.rs"
 [dependencies]
 rand = "0.8"
 clap = { version = "4.5", features = ["derive"] }
+stats = { path = "../src/core/stats" }
+matlib = { path = "../src/core/matlib" }

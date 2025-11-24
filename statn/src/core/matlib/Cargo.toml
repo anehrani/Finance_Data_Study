@@ -9,3 +9,4 @@ path = "lib.rs"
 
 [dependencies]
 rand = "0.8"
+stats = { path = "../stats" }

@@ -1,7 +1,6 @@
 use anyhow::Result;
-use std::fs::File;
-use std::io::Write;
 
+use std::io::Write;
 use crate::criteria::{criterion, CriterionType};
 use crate::drawdown::{drawdown_quantiles, find_quantile};
 use crate::market_data::{align_dates, convert_to_log_prices, load_markets};
@@ -20,10 +19,11 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     let quantile_reps = 10000;
     let n_trades = 252; // One year if daily prices
 
-    // Open report file
-    let mut fp_report = File::create("CHOOSER.LOG")?;
+    // Open report buffer
+    let mut buffer = String::new();
+    use std::fmt::Write;
     writeln!(
-        fp_report,
+        buffer,
         "CHOOSER_DD  log with IS_n={}  OOS1_n={}",
         is_n, oos1_n
     )?;
@@ -38,7 +38,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     let n_cases = align_dates(&mut markets);
 
     writeln!(
-        fp_report,
+        buffer,
         "\n\nMerged database has {} records from date {} to {}",
         n_cases,
         markets[0].dates[0],
@@ -50,7 +50,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
 
     // Print return of each market over OOS2 period
     writeln!(
-        fp_report,
+        buffer,
         "\n\n25200 * mean return of each market in OOS2 period..."
     )?;
     let mut sum = 0.0;
@@ -59,9 +59,9 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
             * (market.close[n_cases - 1] - market.close[is_n + oos1_n - 1])
             / (n_cases - is_n - oos1_n) as f64;
         sum += ret;
-        writeln!(fp_report, "{:>15} {:9.4}", market.name, ret)?;
+        writeln!(buffer, "{:>15} {:9.4}", market.name, ret)?;
     }
-    writeln!(fp_report, "Mean = {:9.4}", sum / n_markets as f64)?;
+    writeln!(buffer, "Mean = {:9.4}", sum / n_markets as f64)?;
 
     // Allocate memory for OOS1 and OOS2
     let mut oos1 = vec![0.0; N_CRITERIA * n_cases];
@@ -174,7 +174,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
 
     // Print summary
     writeln!(
-        fp_report,
+        buffer,
         "\n\n25200 * mean log return of each criterion, and pct times chosen"
     )?;
 
@@ -183,7 +183,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     for i in 0..N_CRITERIA {
         let crit_type = CriterionType::from_index(i).unwrap();
         writeln!(
-            fp_report,
+            buffer,
             "{:>15} {:9.4}  Chosen {:.1} pct",
             crit_type.name(),
             crit_perf[i],
@@ -192,7 +192,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     }
 
     writeln!(
-        fp_report,
+        buffer,
         "\n\n25200 * mean return of final system = {:.4}",
         final_perf
     )?;
@@ -236,24 +236,25 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     }
 
     // Sort for CDF and find quantiles
-    qsortd(&mut q001);
-    qsortd(&mut q01);
-    qsortd(&mut q05);
-    qsortd(&mut q10);
+    // Sort for CDF and find quantiles
+    qsortd(0, bootstrap_reps - 1, &mut q001);
+    qsortd(0, bootstrap_reps - 1, &mut q01);
+    qsortd(0, bootstrap_reps - 1, &mut q05);
+    qsortd(0, bootstrap_reps - 1, &mut q10);
 
     // Print for user
-    writeln!(fp_report, "\n\nDrawdown approximate bounds.")?;
+    writeln!(buffer, "\n\nDrawdown approximate bounds.")?;
     writeln!(
-        fp_report,
+        buffer,
         "Rows are drawdown probability, columns are confidence in bounds."
     )?;
     writeln!(
-        fp_report,
+        buffer,
         "          0.5       0.6       0.7       0.8       0.9       0.95"
     )?;
 
     writeln!(
-        fp_report,
+        buffer,
         "0.001  {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}",
         find_quantile(bootstrap_reps, &q001, 0.5),
         find_quantile(bootstrap_reps, &q001, 0.6),
@@ -264,7 +265,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     )?;
 
     writeln!(
-        fp_report,
+        buffer,
         "0.01   {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}",
         find_quantile(bootstrap_reps, &q01, 0.5),
         find_quantile(bootstrap_reps, &q01, 0.6),
@@ -275,7 +276,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     )?;
 
     writeln!(
-        fp_report,
+        buffer,
         "0.05   {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}",
         find_quantile(bootstrap_reps, &q05, 0.5),
         find_quantile(bootstrap_reps, &q05, 0.6),
@@ -286,7 +287,7 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
     )?;
 
     writeln!(
-        fp_report,
+        buffer,
         "0.10   {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}  {:8.3}",
         find_quantile(bootstrap_reps, &q10, 0.5),
         find_quantile(bootstrap_reps, &q10, 0.6),
@@ -298,5 +299,6 @@ pub fn run_chooser_dd(file_list: &str, is_n: usize, oos1_n: usize) -> Result<()>
 
     println!("\n\nResults written to CHOOSER.LOG");
 
-    Ok(())
+    statn::core::io::write::write_file("CHOOSER.LOG", buffer)
+        .map_err(|e| anyhow::anyhow!("Failed to write CHOOSER.LOG: {}", e))
 }

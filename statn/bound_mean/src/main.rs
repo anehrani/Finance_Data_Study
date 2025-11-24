@@ -445,8 +445,8 @@ fn analyze_returns(label: &str, returns: &[f64], scale: f64) {
     let (t_val, p_val, t_lower) = if n > 1 {
         let stddev_val = (stddev / (n - 1) as f64).sqrt();
         let t = (n as f64).sqrt() * mean / (stddev_val + 1.0e-20);
-        let p = 1.0 - stats::t_cdf(n - 1, t);
-        let t_low = mean - stddev_val / (n as f64).sqrt() * stats::inverse_t_cdf(n - 1, 0.9);
+        let p = 1.0 - stats::t_cdf((n - 1) as i32, t);
+        let t_low = mean - stddev_val / (n as f64).sqrt() * stats::inverse_t_cdf((n - 1) as i32, 0.9);
         (t, p, t_low)
     } else {
         (0.0, 1.0, 0.0)
@@ -471,7 +471,7 @@ fn calc_t_lower(returns: &[f64]) -> f64 {
         stddev += diff * diff;
     }
     let stddev_val = (stddev / (n - 1) as f64).sqrt();
-    mean - stddev_val / (n as f64).sqrt() * stats::inverse_t_cdf(n - 1, 0.9)
+    mean - stddev_val / (n as f64).sqrt() * stats::inverse_t_cdf((n - 1) as i32, 0.9)
 }
 
 fn read_market_file(filename: &PathBuf) -> Result<Vec<f64>> {

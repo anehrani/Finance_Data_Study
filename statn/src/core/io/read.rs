@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use crate::core::data_utils::chart::{BarData, parse_ohlc_line};
+use crate::core::data::chart::{BarData, parse_ohlc_line};
 
 /*
 Read market file

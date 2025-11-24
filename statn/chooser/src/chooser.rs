@@ -1,7 +1,6 @@
 use anyhow::Result;
-use std::fs::File;
-use std::io::Write;
 
+use std::io::Write;
 use crate::criteria::{criterion, CriterionType};
 use crate::market_data::{align_dates, convert_to_log_prices, load_markets};
 use crate::permutation::{do_permute, prepare_permute};
@@ -23,10 +22,11 @@ pub fn run_chooser(
         anyhow::bail!("Invalid parameters: IS_n must be >= 2 and OOS1_n must be >= 1");
     }
 
-    // Open report file
-    let mut fp_report = File::create("CHOOSER.LOG")?;
+    // Open report buffer
+    let mut buffer = String::new();
+    use std::fmt::Write;
     writeln!(
-        fp_report,
+        buffer,
         "CHOOSER log with IS_n={}  OOS1_n={}  Reps={}",
         is_n, oos1_n, nreps
     )?;
@@ -39,7 +39,7 @@ pub fn run_chooser(
     let n_cases = align_dates(&mut markets);
 
     writeln!(
-        fp_report,
+        buffer,
         "\n\nMerged database has {} records from date {} to {}",
         n_cases,
         markets[0].dates[0],
@@ -51,7 +51,7 @@ pub fn run_chooser(
 
     // Print return of each market over OOS2 period
     writeln!(
-        fp_report,
+        buffer,
         "\n\n25200 * mean return of each market in OOS2 period..."
     )?;
     let mut sum = 0.0;
@@ -60,9 +60,9 @@ pub fn run_chooser(
             * (market.close[n_cases - 1] - market.close[is_n + oos1_n - 1])
             / (n_cases - is_n - oos1_n) as f64;
         sum += ret;
-        writeln!(fp_report, "{:>15} {:9.4}", market.name, ret)?;
+        writeln!(buffer, "{:>15} {:9.4}", market.name, ret)?;
     }
-    writeln!(fp_report, "Mean = {:9.4}", sum / n_markets as f64)?;
+    writeln!(buffer, "Mean = {:9.4}", sum / n_markets as f64)?;
 
     // Allocate memory for OOS1 and OOS2
     let mut oos1 = vec![0.0; N_CRITERIA * n_cases];
@@ -230,12 +230,12 @@ pub fn run_chooser(
     // Print summary
     if nreps > 1 {
         writeln!(
-            fp_report,
+            buffer,
             "\n\n25200 * mean return of each criterion, p-value, and percent of times chosen..."
         )?;
     } else {
         writeln!(
-            fp_report,
+            buffer,
             "\n\n25200 * mean return of each criterion, and percent of times chosen..."
         )?;
     }
@@ -246,7 +246,7 @@ pub fn run_chooser(
         let crit_type = CriterionType::from_index(i).unwrap();
         if nreps > 1 {
             writeln!(
-                fp_report,
+                buffer,
                 "{:>15} {:9.4}  p={:.3}  Chosen {:.1} pct",
                 crit_type.name(),
                 crit_perf[i],
@@ -255,7 +255,7 @@ pub fn run_chooser(
             )?;
         } else {
             writeln!(
-                fp_report,
+                buffer,
                 "{:>15} {:9.4}  Chosen {:.1} pct",
                 crit_type.name(),
                 crit_perf[i],
@@ -266,14 +266,14 @@ pub fn run_chooser(
 
     if nreps > 1 {
         writeln!(
-            fp_report,
+            buffer,
             "\n\n25200 * mean return of final system = {:.4}  p={:.3}",
             final_perf,
             final_pval as f64 / nreps as f64
         )?;
     } else {
         writeln!(
-            fp_report,
+            buffer,
             "\n\n25200 * mean return of final system = {:.4}",
             final_perf
         )?;
@@ -281,5 +281,6 @@ pub fn run_chooser(
 
     println!("\n\nResults written to CHOOSER.LOG");
 
-    Ok(())
+    statn::core::io::write::write_file("CHOOSER.LOG", buffer)
+        .map_err(|e| anyhow::anyhow!("Failed to write CHOOSER.LOG: {}", e))
 }

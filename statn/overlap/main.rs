@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::f64::consts::PI;
+use stats::normal_cdf;
 
 /// Explore the effect of unobvious IS/OOS overlap in walkforward
 #[derive(Parser, Debug)]
@@ -30,154 +30,7 @@ struct Args {
     nreps: usize,
 }
 
-/// Normal CDF - Accurate to 7.5e-8
-fn normal_cdf(z: f64) -> f64 {
-    let zz = z.abs();
-    let pdf = (-0.5 * zz * zz).exp() / (2.0 * PI).sqrt();
-    let t = 1.0 / (1.0 + zz * 0.2316419);
-    let poly = ((((1.330274429 * t - 1.821255978) * t + 1.781477937) * t - 0.356563782) * t
-        + 0.319381530)
-        * t;
-
-    if z > 0.0 {
-        1.0 - pdf * poly
-    } else {
-        pdf * poly
-    }
-}
-
-/// In-place quicksort for f64 slices
-fn quicksort(data: &mut [f64]) {
-    if data.len() <= 1 {
-        return;
-    }
-    quicksort_range(data, 0, data.len() - 1);
-}
-
-fn quicksort_range(data: &mut [f64], first: usize, last: usize) {
-    if first >= last {
-        return;
-    }
-
-    let split = data[(first + last) / 2];
-    let mut lower = first;
-    let mut upper = last;
-
-    loop {
-        while split > data[lower] {
-            lower += 1;
-        }
-        while split < data[upper] {
-            upper = upper.saturating_sub(1);
-        }
-
-        if lower == upper {
-            lower += 1;
-            upper = upper.saturating_sub(1);
-        } else if lower < upper {
-            data.swap(lower, upper);
-            lower += 1;
-            upper = upper.saturating_sub(1);
-        }
-
-        if lower > upper {
-            break;
-        }
-    }
-
-    if first < upper {
-        quicksort_range(data, first, upper);
-    }
-    if lower < last {
-        quicksort_range(data, lower, last);
-    }
-}
-
-/// Marsaglia's MWC256 random number generator
-struct Mwc256 {
-    q: [u32; 256],
-    carry: u32,
-    i: u8,
-}
-
-impl Mwc256 {
-    fn new(seed: u32) -> Self {
-        let mut q = [0u32; 256];
-        let mut j = seed;
-
-        for item in q.iter_mut() {
-            j = j.wrapping_mul(69069).wrapping_add(12345);
-            *item = j;
-        }
-
-        Mwc256 {
-            q,
-            carry: 362436,
-            i: 255,
-        }
-    }
-
-    fn next(&mut self) -> u32 {
-        self.i = self.i.wrapping_add(1);
-        let a: u64 = 809430660;
-        let t = a * (self.q[self.i as usize] as u64) + (self.carry as u64);
-        self.carry = (t >> 32) as u32;
-        self.q[self.i as usize] = (t & 0xFFFFFFFF) as u32;
-        self.q[self.i as usize]
-    }
-
-    fn unifrand(&mut self) -> f64 {
-        let mult = 1.0 / 0xFFFFFFFFu32 as f64;
-        mult * (self.next() as f64)
-    }
-}
-
-/// Compute indicator (linear slope) and target (price change)
-fn ind_targ(lookback: usize, lookahead: usize, x: &[f64]) -> (f64, f64) {
-    let mut slope = 0.0;
-    let mut denom = 0.0;
-
-    for i in 0..lookback {
-        let coef = 2.0 * (i as f64) / ((lookback - 1) as f64) - 1.0;
-        denom += coef * coef;
-        slope += coef * x[i];
-    }
-
-    let ind = slope / denom;
-    let targ = x[lookback - 1 + lookahead] - x[lookback - 1];
-
-    (ind, targ)
-}
-
-/// Find beta coefficient for simple linear regression
-fn find_beta(data: &[(f64, f64)]) -> (f64, f64) {
-    let n = data.len() as f64;
-    let mut xmean = 0.0;
-    let mut ymean = 0.0;
-
-    for (x, y) in data.iter() {
-        xmean += x;
-        ymean += y;
-    }
-
-    xmean /= n;
-    ymean /= n;
-
-    let mut xy = 0.0;
-    let mut xx = 0.0;
-
-    for (x, y) in data.iter() {
-        let x_dev = x - xmean;
-        let y_dev = y - ymean;
-        xy += x_dev * y_dev;
-        xx += x_dev * x_dev;
-    }
-
-    let beta = xy / (xx + 1e-60);
-    let constant = ymean - beta * xmean;
-
-    (beta, constant)
-}
+use matlib::{Mwc256, qsortd, ind_targ, find_beta};
 
 fn main() {
     let mut args = Args::parse();
@@ -208,7 +61,7 @@ fn main() {
         args.nprices, args.lookback, args.lookahead, args.ntrain, args.ntest, args.omit, args.extra
     );
 
-    let mut rng = Mwc256::new(123456789);
+    let mut rng = Mwc256::with_seed(123456789);
     let mut save_t = vec![0.0; args.nreps];
     let mut p1_count = 0;
 
@@ -222,7 +75,7 @@ fn main() {
         // Build dataset of indicators and targets
         let mut data = Vec::new();
         for i in 0..(args.nprices - args.lookback - args.lookahead + 1) {
-            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x[i..]);
+            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x, i + args.lookback - 1);
             data.push((ind, targ));
         }
 
@@ -293,7 +146,9 @@ fn main() {
     }
 
     // Sort and report median
-    quicksort(&mut save_t);
+    if !save_t.is_empty() {
+        qsortd(0, save_t.len() - 1, &mut save_t);
+    }
     let n_oos = {
         // Recalculate n_oos for the last replication (they should all be the same)
         let mut x = vec![0.0; args.nprices];
@@ -302,7 +157,7 @@ fn main() {
         }
         let mut data = Vec::new();
         for i in 0..(args.nprices - args.lookback - args.lookahead + 1) {
-            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x[i..]);
+            let (ind, targ) = ind_targ(args.lookback, args.lookahead, &x, i + args.lookback - 1);
             data.push((ind, targ));
         }
         let ncases = data.len();

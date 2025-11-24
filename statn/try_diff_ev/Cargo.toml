@@ -7,6 +7,9 @@ edition = "2024"
 name = "try_diff_ev"
 path = "main.rs"
 
+[dev-dependencies]
+tempfile = "3.10"
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
