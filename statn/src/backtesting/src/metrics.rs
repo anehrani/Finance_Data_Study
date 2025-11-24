@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 /// Calculate performance metrics
-pub fn calculate_metrics(daily_returns: &[f64], risk_free_rate: f64) -> HashMap<String, f64> {
-    let mut metrics = HashMap::new();
+pub fn calculate_metrics(daily_returns: &[f64], risk_free_rate: f64) -> FxHashMap<String, f64> {
+    let mut metrics = FxHashMap::default();
     let n = daily_returns.len();
     
     if n == 0 {

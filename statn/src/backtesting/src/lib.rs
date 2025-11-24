@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 pub mod metrics;
 pub mod report;
@@ -34,7 +34,7 @@ pub struct BacktestResult {
     /// Daily returns
     pub daily_returns: Vec<f64>,
     /// Performance metrics
-    pub metrics: HashMap<String, f64>,
+    pub metrics: FxHashMap<String, f64>,
     /// Trade log (optional, could be added later)
     pub trades: usize,
 }
@@ -100,7 +100,7 @@ pub fn run_backtest<S: Strategy>(
     }
 
     // Calculate metrics (placeholder for now)
-    let mut metrics = HashMap::new();
+    let mut metrics = FxHashMap::default();
     let total_return = (equity.last().unwrap() - config.initial_capital) / config.initial_capital;
     metrics.insert("Total Return".to_string(), total_return);
     metrics.insert("Trades".to_string(), trades as f64);
