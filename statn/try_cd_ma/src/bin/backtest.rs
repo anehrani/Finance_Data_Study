@@ -57,8 +57,18 @@ fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     // Generate indicator specifications
-    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short);
-    println!("Number of indicators: {}", specs.len());
+    let specs = generate_specs(
+        config.lookback_inc,
+        config.n_long,
+        config.n_short,
+        config.enable_rsi,
+        &config.rsi_periods,
+    );
+    println!("MA indicators: {}", config.n_ma_vars());
+    if config.enable_rsi {
+        println!("RSI indicators: {}", config.n_rsi_vars());
+    }
+    println!("Total indicators: {}", specs.len());
 
     // Compute indicators for the new data
     // We use the entire dataset for testing here

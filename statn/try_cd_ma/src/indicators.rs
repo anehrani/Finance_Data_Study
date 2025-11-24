@@ -1,12 +1,20 @@
 use anyhow::Result;
 use indicators::trend::ma::compute_indicators as compute_ma_indicator;
+use indicators::oscillator::rsi::compute_rsi_ema;
 use statn::core::io::compute_targets;
 
-/// Specification for a single indicator (MA crossover)
+/// Specification for a single indicator
 #[derive(Debug, Clone)]
-pub struct IndicatorSpec {
-    pub short_lookback: usize,
-    pub long_lookback: usize,
+pub enum IndicatorSpec {
+    /// Moving average crossover indicator
+    MovingAverage {
+        short_lookback: usize,
+        long_lookback: usize,
+    },
+    /// RSI oscillation indicator
+    RSI {
+        period: usize,
+    },
 }
 
 /// Computed indicators and targets for a dataset
@@ -23,20 +31,36 @@ pub struct IndicatorData {
 }
 
 /// Generate all indicator specifications based on configuration
-pub fn generate_specs(lookback_inc: usize, n_long: usize, n_short: usize) -> Vec<IndicatorSpec> {
-    (0..n_long)
-        .flat_map(|ilong| {
-            let long_lookback = (ilong + 1) * lookback_inc;
-            (0..n_short).map(move |ishort| {
-                let short_lookback = long_lookback * (ishort + 1) / (n_short + 1);
-                let short_lookback = short_lookback.max(1);
-                IndicatorSpec {
-                    short_lookback,
-                    long_lookback,
-                }
-            })
-        })
-        .collect()
+pub fn generate_specs(
+    lookback_inc: usize,
+    n_long: usize,
+    n_short: usize,
+    enable_rsi: bool,
+    rsi_periods: &[usize],
+) -> Vec<IndicatorSpec> {
+    let mut specs = Vec::new();
+    
+    // Generate MA crossover indicators
+    for ilong in 0..n_long {
+        let long_lookback = (ilong + 1) * lookback_inc;
+        for ishort in 0..n_short {
+            let short_lookback = long_lookback * (ishort + 1) / (n_short + 1);
+            let short_lookback = short_lookback.max(1);
+            specs.push(IndicatorSpec::MovingAverage {
+                short_lookback,
+                long_lookback,
+            });
+        }
+    }
+    
+    // Generate RSI indicators if enabled
+    if enable_rsi {
+        for &period in rsi_periods {
+            specs.push(IndicatorSpec::RSI { period });
+        }
+    }
+    
+    specs
 }
 
 /// Compute all indicators for a dataset
@@ -50,13 +74,25 @@ pub fn compute_all_indicators(
     let mut data = vec![0.0; n_cases * n_vars];
     
     for (k, spec) in specs.iter().enumerate() {
-        let indicators = compute_ma_indicator(
-            n_cases,
-            prices,
-            start_idx,
-            spec.short_lookback,
-            spec.long_lookback,
-        );
+        let indicators = match spec {
+            IndicatorSpec::MovingAverage { short_lookback, long_lookback } => {
+                compute_ma_indicator(
+                    n_cases,
+                    prices,
+                    start_idx,
+                    *short_lookback,
+                    *long_lookback,
+                )
+            }
+            IndicatorSpec::RSI { period } => {
+                compute_rsi_ema(
+                    n_cases,
+                    prices,
+                    start_idx,
+                    *period,
+                )
+            }
+        };
         
         for i in 0..n_cases {
             data[i * n_vars + k] = indicators[i];
@@ -91,15 +127,50 @@ mod tests {
     
     #[test]
     fn test_generate_specs() {
-        let specs = generate_specs(10, 3, 2);
+        let specs = generate_specs(10, 3, 2, false, &[]);
         assert_eq!(specs.len(), 6); // 3 * 2
         
-        // Check first spec
-        assert_eq!(specs[0].long_lookback, 10);
-        assert!(specs[0].short_lookback > 0);
+        // Check first spec is MA
+        match &specs[0] {
+            IndicatorSpec::MovingAverage { short_lookback, long_lookback } => {
+                assert_eq!(*long_lookback, 10);
+                assert!(*short_lookback > 0);
+            }
+            _ => panic!("Expected MovingAverage spec"),
+        }
         
         // Check that long lookbacks increase
-        assert!(specs[2].long_lookback > specs[0].long_lookback);
+        match (&specs[0], &specs[2]) {
+            (
+                IndicatorSpec::MovingAverage { long_lookback: l1, .. },
+                IndicatorSpec::MovingAverage { long_lookback: l2, .. },
+            ) => {
+                assert!(l2 > l1);
+            }
+            _ => panic!("Expected MovingAverage specs"),
+        }
+    }
+    
+    #[test]
+    fn test_generate_specs_with_rsi() {
+        let specs = generate_specs(10, 3, 2, true, &[7, 14, 21]);
+        assert_eq!(specs.len(), 9); // 3 * 2 + 3
+        
+        // First 6 should be MA
+        for i in 0..6 {
+            match &specs[i] {
+                IndicatorSpec::MovingAverage { .. } => {},
+                _ => panic!("Expected MovingAverage spec at index {}", i),
+            }
+        }
+        
+        // Last 3 should be RSI
+        for i in 6..9 {
+            match &specs[i] {
+                IndicatorSpec::RSI { .. } => {},
+                _ => panic!("Expected RSI spec at index {}", i),
+            }
+        }
     }
     
     #[test]

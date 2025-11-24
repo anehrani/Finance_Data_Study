@@ -44,6 +44,14 @@ pub struct Config {
     /// Convergence tolerance
     #[serde(default = "default_tolerance")]
     pub tolerance: f64,
+    
+    /// Enable RSI oscillation indicators
+    #[serde(default = "default_enable_rsi")]
+    pub enable_rsi: bool,
+    
+    /// RSI periods to test
+    #[serde(default = "default_rsi_periods")]
+    pub rsi_periods: Vec<usize>,
 }
 
 fn default_output_file() -> PathBuf {
@@ -68,6 +76,14 @@ fn default_max_iterations() -> usize {
 
 fn default_tolerance() -> f64 {
     1e-9
+}
+
+fn default_enable_rsi() -> bool {
+    false
+}
+
+fn default_rsi_periods() -> Vec<usize> {
+    vec![14]
 }
 
 /// Command-line arguments
@@ -132,6 +148,8 @@ impl Config {
             n_lambdas: default_n_lambdas(),
             max_iterations: default_max_iterations(),
             tolerance: default_tolerance(),
+            enable_rsi: default_enable_rsi(),
+            rsi_periods: default_rsi_periods(),
         };
         
         config.validate()?;
@@ -180,12 +198,30 @@ impl Config {
     
     /// Get total number of indicator variables
     pub fn n_vars(&self) -> usize {
+        let ma_vars = self.n_long * self.n_short;
+        let rsi_vars = if self.enable_rsi { self.rsi_periods.len() } else { 0 };
+        ma_vars + rsi_vars
+    }
+    
+    /// Get number of MA indicator variables
+    pub fn n_ma_vars(&self) -> usize {
         self.n_long * self.n_short
+    }
+    
+    /// Get number of RSI indicator variables
+    pub fn n_rsi_vars(&self) -> usize {
+        if self.enable_rsi { self.rsi_periods.len() } else { 0 }
     }
     
     /// Get maximum lookback period
     pub fn max_lookback(&self) -> usize {
-        self.n_long * self.lookback_inc
+        let ma_lookback = self.n_long * self.lookback_inc;
+        if self.enable_rsi {
+            let rsi_lookback = self.rsi_periods.iter().max().copied().unwrap_or(0);
+            ma_lookback.max(rsi_lookback)
+        } else {
+            ma_lookback
+        }
     }
 }
 
@@ -207,6 +243,8 @@ mod tests {
             n_lambdas: 50,
             max_iterations: 1000,
             tolerance: 1e-9,
+            enable_rsi: false,
+            rsi_periods: vec![14],
         };
         
         assert!(config.validate().is_ok());
@@ -232,6 +270,8 @@ mod tests {
             n_lambdas: 50,
             max_iterations: 1000,
             tolerance: 1e-9,
+            enable_rsi: false,
+            rsi_periods: vec![14],
         };
         
         assert_eq!(config.n_vars(), 200);

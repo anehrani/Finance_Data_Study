@@ -20,8 +20,18 @@ fn main() -> Result<()> {
     println!("Test cases: {}", split.test_data.len() - split.max_lookback);
     
     // Generate indicator specifications
-    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short);
-    println!("Number of indicators: {}", specs.len());
+    let specs = generate_specs(
+        config.lookback_inc,
+        config.n_long,
+        config.n_short,
+        config.enable_rsi,
+        &config.rsi_periods,
+    );
+    println!("MA indicators: {}", config.n_ma_vars());
+    if config.enable_rsi {
+        println!("RSI indicators: {}", config.n_rsi_vars());
+    }
+    println!("Total indicators: {}", specs.len());
     
     // Compute training indicators
     let n_train = split.train_data.len() - split.max_lookback - 1;
