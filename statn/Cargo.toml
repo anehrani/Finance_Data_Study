@@ -15,6 +15,7 @@ members = [
     "chooser",
     "per_what", "bound_mean", "bootstrap_rate", "conftest", "bnd_ret", "drawdown",
     "montecarlo_permutation_test",
+    "src/backtesting",
 ]
 
 [package]
