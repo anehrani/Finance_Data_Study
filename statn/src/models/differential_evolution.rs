@@ -68,7 +68,7 @@ where
     // during overinit, replacing the worst in pop1 if better.
 
     for ind in 0..(popsize + overinit) {
-        let mut popptr_idx = if ind < popsize {
+        let popptr_idx = if ind < popsize {
             ind * dim
         } else {
             0 // Use first slot of pop2 (which is separate from pop1)
@@ -104,8 +104,8 @@ where
             best.copy_from_slice(popptr);
         }
 
-        if value <= 0.0 {
-            if n_evals > max_evals {
+        if value <= 0.0
+            && n_evals > max_evals {
                 return Err("Exceeded max_evals with worthless individuals".to_string());
             }
             // In Rust loop, we can't easily "decrement ind".
@@ -123,7 +123,6 @@ where
             // Since we can't modify the loop counter `ind`, we need to handle the "retry" logic differently.
             // But wait, if we are in the `for` loop, we can't just retry.
             // Let's use a `while` loop instead.
-        }
     }
     
     // Re-implementing initialization with a while loop to handle retries
@@ -224,8 +223,8 @@ where
                 avg,
                 n_evals as f64 / (ind as f64 + 1.0)
             );
-            for i in 0..nvars {
-                print!(" {:.4}", current_ind[i]);
+            for val in current_ind.iter().take(nvars) {
+                print!(" {:.4}", val);
             }
         }
 
@@ -383,9 +382,7 @@ where
                 }
             } else {
                 // Copy parent1 to dest
-                for x in 0..dim {
-                    pop2[dest_idx + x] = pop1[p1_idx + x];
-                }
+                pop2[dest_idx..(dim + dest_idx)].copy_from_slice(&pop1[p1_idx..(dim + p1_idx)]);
                 child_val = parent_val;
             }
             
@@ -536,7 +533,7 @@ where
                     // We need to pass a closure to glob_max and brentmax that modifies ONLY the k_var parameter
                     // But we can't easily capture a mutable slice.
                     // We can copy the parameters to a temporary vector.
-                    let mut temp_params = pop2[dest_idx..dest_idx+nvars].to_vec();
+                    let temp_params = pop2[dest_idx..dest_idx+nvars].to_vec();
                     
                     let c_func = |param: f64| -> f64 {
                         let mut my_params = temp_params.clone();
@@ -597,8 +594,8 @@ where
 
         if print_progress {
             print!("\nGen {} Best={:.4} Worst={:.4} Avg={:.4}", generation, grand_best, worstf, avgf / popsize as f64);
-            for i in 0..nvars {
-                print!(" {:.4}", best[i]);
+            for val in best.iter().take(nvars) {
+                print!(" {:.4}", val);
             }
         }
         

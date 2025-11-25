@@ -1,5 +1,5 @@
 
-//// Stochastic Bias Estimator
+/// Stochastic Bias Estimator
 /// 
 /// Estimates training bias from data collected from a stochastic training procedure.
 /// The key idea is to track in-sample (IS) best performance and out-of-sample (OOS)

@@ -73,7 +73,7 @@ pub fn write_results<P: AsRef<Path>>(
     config: &Config,
     training: &TrainingResult,
     evaluation: &EvaluationResult,
-    _specs: &[IndicatorSpec],
+    specs: &[IndicatorSpec],
 ) -> Result<()> {
     // Create parent directory if it doesn't exist
     if let Some(parent) = path.as_ref().parent() {
@@ -97,7 +97,10 @@ pub fn write_results<P: AsRef<Path>>(
     writeln!(file, "  Number of short-term lookbacks: {}", config.n_short)?;
     writeln!(file, "  Alpha: {:.4}", config.alpha)?;
     writeln!(file, "  MA indicators: {}", config.n_ma_vars())?;
-
+    if config.enable_rsi {
+        writeln!(file, "  RSI indicators: {}", config.n_rsi_vars())?;
+        writeln!(file, "  RSI periods: {:?}", config.rsi_periods)?;
+    }
     writeln!(file, "  Total indicators: {}", config.n_vars())?;
     writeln!(file, "  Test cases: {}", config.n_test)?;
     writeln!(file)?;
@@ -149,7 +152,25 @@ pub fn write_results<P: AsRef<Path>>(
     writeln!(file)?;
     
     // RSI beta coefficients if enabled
-
+    if config.enable_rsi {
+        writeln!(file, "RSI Beta Coefficients:")?;
+        writeln!(file, "  {:>10} {:>15}", "Period", "Beta")?;
+        writeln!(file, "  {}", "-".repeat(27))?;
+        
+        for (i, &period) in config.rsi_periods.iter().enumerate() {
+            let beta_idx = config.n_ma_vars() + i;
+            if training.model.beta[beta_idx] != 0.0 {
+                writeln!(
+                    file,
+                    "  {:>10} {:>15.4}",
+                    period, training.model.beta[beta_idx]
+                )?;
+            } else {
+                writeln!(file, "  {:>10}         ----", period)?;
+            }
+        }
+        writeln!(file)?;
+    }
     
     // Out-of-sample results
     writeln!(file, "Out-of-Sample Results:")?;

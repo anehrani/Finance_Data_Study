@@ -162,41 +162,40 @@ impl CoordinateDescent {
         }
 
         // Handle weights if present
-        if let Some(ref mut w) = self.w {
-            if let Some(ww_data) = ww {
-                let mut sum = 0.0;
-                for icase in 0..self.ncases {
-                    let k = (icase + istart) % n;
-                    w[icase] = ww_data[k];
-                    sum += w[icase];
-                }
-                for icase in 0..self.ncases {
-                    w[icase] /= sum;
-                }
+        if let Some(ref mut w) = self.w 
+            && let Some(ww_data) = ww {
+            let mut sum = 0.0;
+            for (icase, w_val) in w.iter_mut().enumerate().take(self.ncases) {
+                let k = (icase + istart) % n;
+                *w_val = ww_data[k];
+                sum += *w_val;
+            }
+            for w_val in w.iter_mut().take(self.ncases) {
+                *w_val /= sum;
+            }
 
-                // Compute weighted X sum of squares
-                if let Some(ref mut xssvec) = self.xssvec {
-                    for ivar in 0..self.nvars {
-                        let mut sum = 0.0;
-                        for icase in 0..self.ncases {
-                            let x_val = self.x[icase * self.nvars + ivar];
-                            sum += w[icase] * x_val * x_val;
-                        }
-                        xssvec[ivar] = sum;
+            // Compute weighted X sum of squares
+            if let Some(ref mut xssvec) = self.xssvec {
+                for (ivar, xss_val) in xssvec.iter_mut().enumerate().take(self.nvars) {
+                    let mut sum = 0.0;
+                    for (icase, &weight) in w.iter().enumerate().take(self.ncases) {
+                        let x_val = self.x[icase * self.nvars + ivar];
+                        sum += weight * x_val * x_val;
                     }
+                    *xss_val = sum;
                 }
             }
         }
 
         // Compute inner products if using covariance updates
-        if self.covar_updates {
-            if let (Some(xinner), Some(yinner)) = (&mut self.xinner, &mut self.yinner) {
+        if self.covar_updates 
+            && let (Some(xinner), Some(yinner)) = (&mut self.xinner, &mut self.yinner) {
                 for ivar in 0..self.nvars {
                     // Compute XiY
                     let mut sum = 0.0;
                     if let Some(ref w) = self.w {
-                        for icase in 0..self.ncases {
-                            sum += w[icase] * self.x[icase * self.nvars + ivar] * self.y[icase];
+                        for (icase, &weight) in w.iter().enumerate().take(self.ncases) {
+                            sum += weight * self.x[icase * self.nvars + ivar] * self.y[icase];
                         }
                         yinner[ivar] = sum;
                     } else {
@@ -216,8 +215,8 @@ impl CoordinateDescent {
                                     xinner[jvar * self.nvars + ivar];
                             } else {
                                 let mut sum = 0.0;
-                                for icase in 0..self.ncases {
-                                    sum += w[icase]
+                                for (icase, &weight) in w.iter().enumerate().take(self.ncases) {
+                                    sum += weight
                                         * self.x[icase * self.nvars + ivar]
                                         * self.x[icase * self.nvars + jvar];
                                 }
@@ -243,7 +242,7 @@ impl CoordinateDescent {
                     }
                 }
             }
-        }
+
     }
 
     /// Core training routine using coordinate descent
@@ -318,9 +317,9 @@ impl CoordinateDescent {
                 } else if self.w.is_some() {
                     let w = self.w.as_ref().unwrap();
                     let mut sum = 0.0;
-                    for icase in 0..self.ncases {
+                    for (icase, &weight) in w.iter().enumerate().take(self.ncases) {
                         let x_val = self.x[icase * self.nvars + ivar];
-                        sum += w[icase]
+                        sum += weight
                             * x_val
                             * (self.resid[icase] + self.beta[ivar] * x_val);
                     }
@@ -381,8 +380,8 @@ impl CoordinateDescent {
 
                 let mut sum = 0.0;
                 let crit = if let Some(ref w) = self.w {
-                    for icase in 0..self.ncases {
-                        sum += w[icase] * self.resid[icase] * self.resid[icase];
+                    for (icase, &weight) in w.iter().enumerate().take(self.ncases) {
+                        sum += weight * self.resid[icase] * self.resid[icase];
                     }
                     sum
                 } else {
@@ -435,8 +434,8 @@ impl CoordinateDescent {
 
         let mut sum = 0.0;
         let crit = if let Some(ref w) = self.w {
-            for i in 0..self.ncases {
-                sum += w[i] * self.resid[i] * self.resid[i];
+            for (i, &weight) in w.iter().enumerate().take(self.ncases) {
+                sum += weight * self.resid[i] * self.resid[i];
             }
             sum
         } else {
@@ -455,8 +454,8 @@ impl CoordinateDescent {
         for ivar in 0..self.nvars {
             let mut sum = 0.0;
             if let Some(ref w) = self.w {
-                for icase in 0..self.ncases {
-                    sum += w[icase] * self.x[icase * self.nvars + ivar] * self.y[icase];
+                for (icase, &weight) in w.iter().enumerate().take(self.ncases) {
+                    sum += weight * self.x[icase * self.nvars + ivar] * self.y[icase];
                 }
             } else {
                 for icase in 0..self.ncases {
@@ -493,11 +492,10 @@ impl CoordinateDescent {
         let min_lambda = 0.001 * max_lambda;
         let lambda_factor = ((min_lambda / max_lambda).ln() / (self.n_lambda - 1) as f64).exp();
 
-        if print_steps {
-            if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("CDtest.LOG") {
+        if print_steps 
+            && let Ok(mut file) = OpenOptions::new().create(true).append(true).open("CDtest.LOG") {
                 let _ = writeln!(file, "\n\nDescending lambda training...");
                 let _ = writeln!(file, "Lambda  n_active  Explained");
-            }
         }
 
         let mut lambda = max_lambda;
@@ -526,6 +524,7 @@ impl CoordinateDescent {
 }
 
 /// Cross-validation training routine
+#[allow(clippy::too_many_arguments)]
 pub fn cv_train(
     nvars: usize,
     nfolds: usize,
@@ -554,29 +553,25 @@ pub fn cv_train(
     cd.get_data(0, n, xx, yy, ww);
     let max_lambda = cd.get_lambda_thresh(alpha);
 
-    if let Some(ww_data) = ww {
-        if let Some(ref w) = cd.w {
-            for icase in 0..n {
-                work[icase] = w[icase];
-            }
-        }
+    if let Some(ww_data) = ww 
+        && let Some(ref w) = cd.w {
+            work[..n].copy_from_slice(&w[..n]);
     }
 
-    if RESULTS {
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("CDtest.LOG") {
+    if RESULTS 
+        && let Ok(mut file) = OpenOptions::new().create(true).append(true).open("CDtest.LOG") {
             let _ = writeln!(
                 file,
                 "\n\n\ncv_train() starting for {} folds with max lambda={:.4}\n",
                 nfolds, max_lambda
             );
-        }
     }
 
     let mut i_is = 0;
     let mut n_done = 0;
 
-    for ilambda in 0..n_lambda {
-        lambda_oos[ilambda] = 0.0;
+    for val in lambda_oos.iter_mut().take(n_lambda) {
+        *val = 0.0;
     }
 
     let mut yssum_squares = 0.0;
@@ -632,22 +627,21 @@ pub fn cv_train(
     let mut best = -1.0e60;
     let mut ibest = 0;
 
-    for ilambda in 0..n_lambda {
-        lambda_oos[ilambda] = (yssum_squares - lambda_oos[ilambda]) / yssum_squares;
-        if lambda_oos[ilambda] > best {
-            best = lambda_oos[ilambda];
+    for (ilambda, val) in lambda_oos.iter_mut().enumerate().take(n_lambda) {
+        *val = (yssum_squares - *val) / yssum_squares;
+        if *val > best {
+            best = *val;
             ibest = ilambda;
         }
     }
 
-    if RESULTS {
-        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open("CDtest.LOG") {
+    if RESULTS 
+        && let Ok(mut file) = OpenOptions::new().create(true).append(true).open("CDtest.LOG") {
             let _ = writeln!(
                 file,
                 "\ncv_train() ending with best lambda={:.4}  explained={:.4}",
                 lambdas[ibest], best
             );
-        }
     }
 
     lambdas[ibest]

@@ -14,7 +14,6 @@ pub struct TrainingResult {
 }
 
 /// Train model with cross-validation to find optimal lambda
-#[allow(clippy::too_many_arguments)]
 pub fn train_with_cv(
     n_vars: usize,
     n_cases: usize,

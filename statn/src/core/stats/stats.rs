@@ -173,9 +173,7 @@ pub fn ibeta(mut p: f64, mut q: f64, x: f64) -> f64 {
     let aleps1 = eps1.ln();
 
     let switched_args = if x > 0.5 {
-        let temp = p;
-        p = q;
-        q = temp;
+        std::mem::swap(&mut p, &mut q);
         true
     } else {
         false
@@ -491,8 +489,8 @@ pub fn u_test(x1: &[f64], x2: &[f64]) -> (f64, f64) {
         let ntied = k - j;
         tie_correc += (ntied as f64).powi(3) - ntied as f64;
         let rank = 0.5 * ((j as f64) + (k as f64) + 1.0);
-        for idx in j..k {
-            ranks[idx] = rank;
+        for rank_val in ranks.iter_mut().take(k).skip(j) {
+            *rank_val = rank;
         }
         j = k;
     }
@@ -542,7 +540,7 @@ pub fn anderson_darling_test(mut x: Vec<f64>) -> f64 {
     let n = x.len();
     x.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-    let mut z = -1.0 * (n as f64).powi(2);
+    let mut z = -(n as f64).powi(2);
     for i in 0..n {
         let term = x[i] * (1.0 - x[n - i - 1]);
         let term = if term < 1e-30 { 1e-30 } else { term };
@@ -622,8 +620,8 @@ pub fn kruskal_wallis(x: &[f64], group_ids: &[usize], num_groups: usize) -> f64 
         let ntied = k - j;
         tie_correc += (ntied as f64).powi(3) - ntied as f64;
         let rank = 0.5 * ((j as f64) + (k as f64) + 1.0);
-        for idx in j..k {
-            ranks[idx] = rank;
+        for rank_val in ranks.iter_mut().take(k).skip(j) {
+            *rank_val = rank;
         }
         j = k;
     }
@@ -729,8 +727,8 @@ pub fn nominal_lambda(data: &[Vec<i32>]) -> (f64, f64, f64) {
     for j in 0..ncols {
         let mut col_cell_max = 0;
         let mut col_total = 0;
-        for i in 0..nrows {
-            let val = data[i][j];
+        for row in data.iter().take(nrows) {
+            let val = row[j];
             col_cell_max = col_cell_max.max(val);
             col_total += val;
         }

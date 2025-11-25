@@ -456,13 +456,9 @@ pub fn gauss_elimination(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>, Str
         // Swap rows
         if max_row != col {
             for j in 0..n {
-                let temp = a[col * n + j];
-                a[col * n + j] = a[max_row * n + j];
-                a[max_row * n + j] = temp;
+                a.swap(col * n + j, max_row * n + j);
             }
-            let temp = b[col];
-            b[col] = b[max_row];
-            b[max_row] = temp;
+            b.swap(col, max_row);
         }
 
         if a[col * n + col].abs() < 1e-15 {

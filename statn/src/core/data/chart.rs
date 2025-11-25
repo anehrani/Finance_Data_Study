@@ -13,6 +13,12 @@ pub struct BarData {
     pub close: Vec<f64>,
 }
 
+impl Default for BarData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BarData {
     pub fn new() -> Self {
         BarData {
@@ -64,12 +70,12 @@ pub fn parse_ohlc_line(line: &str) -> Option<(u32, f64, f64, f64, f64)> {
     let month = (full_date / 100) % 100;
     let day = full_date % 100;
 
-    if month < 1 || month > 12 || day < 1 || day > 31 || year < 1800 || year > 2030 {
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) || !(1800..=2030).contains(&year) {
         return None;
     }
 
     let parts: Vec<&str> = line[9..]
-        .split(|c: char| c == ' ' || c == '\t' || c == ',')
+        .split([' ', '\t', ','])
         .filter(|s| !s.is_empty())
         .collect();
 

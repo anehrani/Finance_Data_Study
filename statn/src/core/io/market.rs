@@ -63,7 +63,7 @@ fn read_price_file_impl<P: AsRef<Path>>(filename: P, use_log: bool) -> Result<Ve
         
         // Parse price
         let price_str = line[8..]
-            .split(|c: char| c == ' ' || c == '\t' || c == ',')
+            .split([' ', '\t', ','])
             .find(|s| !s.is_empty())
             .ok_or_else(|| format!("No price found on line {}", line_num + 1))?;
         
@@ -128,7 +128,7 @@ fn read_ohlc_file_impl<P: AsRef<Path>>(filename: P, use_log: bool) -> Result<Ohl
         
         // Parse prices
         let parts: Vec<&str> = line[8..]
-            .split(|c: char| c == ' ' || c == '\t' || c == ',')
+            .split([' ', '\t', ','])
             .filter(|s| !s.is_empty())
             .collect();
         

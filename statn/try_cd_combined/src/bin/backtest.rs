@@ -61,15 +61,19 @@ fn main() -> Result<()> {
         config.lookback_inc,
         config.n_long,
         config.n_short,
+        config.enable_rsi,
+        &config.rsi_periods,
     );
     println!("MA indicators: {}", config.n_ma_vars());
-
+    if config.enable_rsi {
+        println!("RSI indicators: {}", config.n_rsi_vars());
+    }
     println!("Total indicators: {}", specs.len());
 
     // Compute indicators for the new data
     // We use the entire dataset for testing here
     let n_cases = prices.len() - config.max_lookback();
-    if n_cases == 0 {
+    if n_cases <= 0 {
         anyhow::bail!("Insufficient data for backtesting");
     }
 

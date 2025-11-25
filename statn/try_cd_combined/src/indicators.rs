@@ -1,5 +1,6 @@
 use anyhow::Result;
 use indicators::trend::ma::compute_indicators as compute_ma_indicator;
+use indicators::oscillator::rsi::compute_rsi_ema;
 use statn::core::io::compute_targets;
 
 /// Specification for a single indicator
@@ -9,6 +10,10 @@ pub enum IndicatorSpec {
     MovingAverage {
         short_lookback: usize,
         long_lookback: usize,
+    },
+    /// RSI oscillation indicator
+    RSI {
+        period: usize,
     },
 }
 
@@ -30,6 +35,8 @@ pub fn generate_specs(
     lookback_inc: usize,
     n_long: usize,
     n_short: usize,
+    enable_rsi: bool,
+    rsi_periods: &[usize],
 ) -> Vec<IndicatorSpec> {
     let mut specs = Vec::new();
     
@@ -45,7 +52,14 @@ pub fn generate_specs(
             });
         }
     }
-        
+    
+    // Generate RSI indicators if enabled
+    if enable_rsi {
+        for &period in rsi_periods {
+            specs.push(IndicatorSpec::RSI { period });
+        }
+    }
+    
     specs
 }
 
@@ -68,6 +82,14 @@ pub fn compute_all_indicators(
                     start_idx,
                     *short_lookback,
                     *long_lookback,
+                )
+            }
+            IndicatorSpec::RSI { period } => {
+                compute_rsi_ema(
+                    n_cases,
+                    prices,
+                    start_idx,
+                    *period,
                 )
             }
         };
@@ -105,7 +127,7 @@ mod tests {
     
     #[test]
     fn test_generate_specs() {
-        let specs = generate_specs(10, 3, 2);
+        let specs = generate_specs(10, 3, 2, false, &[]);
         assert_eq!(specs.len(), 6); // 3 * 2
         
         // Check first spec is MA
@@ -129,7 +151,27 @@ mod tests {
         }
     }
     
-
+    #[test]
+    fn test_generate_specs_with_rsi() {
+        let specs = generate_specs(10, 3, 2, true, &[7, 14, 21]);
+        assert_eq!(specs.len(), 9); // 3 * 2 + 3
+        
+        // First 6 should be MA
+        for i in 0..6 {
+            match &specs[i] {
+                IndicatorSpec::MovingAverage { .. } => {},
+                _ => panic!("Expected MovingAverage spec at index {}", i),
+            }
+        }
+        
+        // Last 3 should be RSI
+        for i in 6..9 {
+            match &specs[i] {
+                IndicatorSpec::RSI { .. } => {},
+                _ => panic!("Expected RSI spec at index {}", i),
+            }
+        }
+    }
     
     #[test]
     fn test_compute_targets() {

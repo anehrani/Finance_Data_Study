@@ -59,22 +59,22 @@ where
                 (high_bounds[ivar] - low_bounds[ivar] + 0.99999999) / (npoints as f64 - 1.0);
 
             // Evaluate criterion at each point
-            for ipoint in 0..npoints {
+            for (ipoint, val) in vals.iter_mut().enumerate().take(npoints) {
                 let ival = (low_bounds[ivar] + ipoint as f64 * label_frac) as i32;
                 params[ivar] = ival as f64;
-                vals[ipoint] = criter(&params, mintrades);
-                if ipoint == 0 || vals[ipoint] > maxval {
-                    maxval = vals[ipoint];
+                *val = criter(&params, mintrades);
+                if ipoint == 0 || *val > maxval {
+                    maxval = *val;
                 }
             }
 
             // Print histogram
             let hist_frac = (nres as f64 + 0.9999999) / maxval.abs().max(1.0e-9);
 
-            for ipoint in 0..npoints {
+            for (ipoint, &val) in vals.iter().enumerate().take(npoints) {
                 let ival = (low_bounds[ivar] + ipoint as f64 * label_frac) as i32;
                 write!(buffer, "\n{:6}|", ival).unwrap();
-                let k = (vals[ipoint] * hist_frac) as i32;
+                let k = (val * hist_frac) as i32;
                 for _ in 0..k {
                     write!(buffer, "*").unwrap();
                 }
@@ -92,22 +92,22 @@ where
             let label_frac = (high_bounds[ivar] - low_bounds[ivar]) / (npoints as f64 - 1.0);
 
             // Evaluate criterion at each point
-            for ipoint in 0..npoints {
+            for (ipoint, val) in vals.iter_mut().enumerate().take(npoints) {
                 let rval = low_bounds[ivar] + ipoint as f64 * label_frac;
                 params[ivar] = rval;
-                vals[ipoint] = criter(&params, mintrades);
-                if ipoint == 0 || vals[ipoint] > maxval {
-                    maxval = vals[ipoint];
+                *val = criter(&params, mintrades);
+                if ipoint == 0 || *val > maxval {
+                    maxval = *val;
                 }
             }
 
             // Print histogram
             let hist_frac = (nres as f64 + 0.9999999) / maxval.abs().max(1.0e-9);
 
-            for ipoint in 0..npoints {
+            for (ipoint, &val) in vals.iter().enumerate().take(npoints) {
                 let rval = low_bounds[ivar] + ipoint as f64 * label_frac;
                 write!(buffer, "\n{:10.3}|", rval).unwrap();
-                let k = (vals[ipoint] * hist_frac) as i32;
+                let k = (val * hist_frac) as i32;
                 for _ in 0..k {
                     write!(buffer, "*").unwrap();
                 }

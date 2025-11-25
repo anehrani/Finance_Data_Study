@@ -53,6 +53,13 @@ pub struct Config {
     #[arg(long, default_value_t = 1e-9)]
     pub tolerance: f64,
     
+    /// Enable RSI oscillation indicators
+    #[arg(long, default_value_t = false)]
+    pub enable_rsi: bool,
+    
+    /// RSI periods to test
+    #[arg(long, value_delimiter = ',', num_args = 1.., default_value = "14")]
+    pub rsi_periods: Vec<usize>,
 }
 
 impl Config {
@@ -84,17 +91,12 @@ impl Config {
         
         Ok(())
     }
-
-    /// Load configuration from TOML file
-    pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> anyhow::Result<Self> {
-        let content = std::fs::read_to_string(path)?;
-        let config: Config = toml::from_str(&content)?;
-        Ok(config)
-    }
     
     /// Get total number of indicator variables
     pub fn n_vars(&self) -> usize {
-        self.n_long * self.n_short
+        let ma_vars = self.n_long * self.n_short;
+        let rsi_vars = if self.enable_rsi { self.rsi_periods.len() } else { 0 };
+        ma_vars + rsi_vars
     }
     
     /// Get number of MA indicator variables
@@ -102,11 +104,20 @@ impl Config {
         self.n_long * self.n_short
     }
     
-
+    /// Get number of RSI indicator variables
+    pub fn n_rsi_vars(&self) -> usize {
+        if self.enable_rsi { self.rsi_periods.len() } else { 0 }
+    }
     
     /// Get maximum lookback period
     pub fn max_lookback(&self) -> usize {
-        self.n_long * self.lookback_inc
+        let ma_lookback = self.n_long * self.lookback_inc;
+        if self.enable_rsi {
+            let rsi_lookback = self.rsi_periods.iter().max().copied().unwrap_or(0);
+            ma_lookback.max(rsi_lookback)
+        } else {
+            ma_lookback
+        }
     }
 }
 
@@ -128,6 +139,8 @@ mod tests {
             n_lambdas: 50,
             max_iterations: 1000,
             tolerance: 1e-9,
+            enable_rsi: false,
+            rsi_periods: vec![14],
         };
         
         assert!(config.validate().is_ok());
@@ -153,6 +166,8 @@ mod tests {
             n_lambdas: 50,
             max_iterations: 1000,
             tolerance: 1e-9,
+            enable_rsi: false,
+            rsi_periods: vec![14],
         };
         
         assert_eq!(config.n_vars(), 200);
