@@ -553,7 +553,7 @@ pub fn cv_train(
     cd.get_data(0, n, xx, yy, ww);
     let max_lambda = cd.get_lambda_thresh(alpha);
 
-    if let Some(ww_data) = ww 
+    if let Some(_ww_data) = ww 
         && let Some(ref w) = cd.w {
             work[..n].copy_from_slice(&w[..n]);
     }

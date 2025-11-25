@@ -51,14 +51,14 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
     let mut distances: Vec<f64> = vec![0.0; ncases];
     let mut indices: Vec<usize> = (0..ncases).collect();
 
-    for i in 0..ncases {
+    for (i, dist_val) in distances.iter_mut().enumerate().take(ncases) {
         let ind = i * (nparams + 1);
         let mut sum = 0.0;
         for j in 0..nparams {
             let diff = data[ind + j] - best[j];
             sum += diff * diff;
         }
-        distances[i] = sum;
+        *dist_val = sum;
     }
 
     // Sort by distance
@@ -192,8 +192,8 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
     .map_err(|e| format!("Write error: {}", e))?;
 
     let mut line = String::new();
-    for j in 0..nparams {
-        line.push_str(&format!(" {:11.3e}", evals[j]));
+    for &eval in evals.iter().take(nparams) {
+        line.push_str(&format!(" {:11.3e}", eval));
     }
     writeln!(buffer, "{}", line).map_err(|e| format!("Write error: {}", e))?;
 

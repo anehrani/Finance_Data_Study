@@ -35,7 +35,7 @@ pub fn compute_rsi(
         return rsi_values;
     }
     
-    for i in 0..n_cases {
+    for (i, rsi_val) in rsi_values.iter_mut().enumerate().take(n_cases) {
         let current_idx = start_idx + i;
         
         // Need period+1 prices to compute period changes
@@ -76,7 +76,7 @@ pub fn compute_rsi(
         // RSI = 50 → 0
         // RSI = 100 → 1
         // RSI = 0 → -1
-        rsi_values[i] = (rsi - 50.0) / 50.0;
+        *rsi_val = (rsi - 50.0) / 50.0;
     }
     
     rsi_values
@@ -132,7 +132,7 @@ pub fn compute_rsi_ema(
     let alpha = 1.0 / period as f64;
     
     // Compute RSI for each case using EMA
-    for i in 0..n_cases {
+    for (i, rsi_val) in rsi_values.iter_mut().enumerate().take(n_cases) {
         let current_idx = start_idx + i;
         
         if current_idx == 0 {
@@ -161,7 +161,7 @@ pub fn compute_rsi_ema(
         };
         
         // Normalize to [-1, 1]
-        rsi_values[i] = (rsi - 50.0) / 50.0;
+        *rsi_val = (rsi - 50.0) / 50.0;
     }
     
     rsi_values

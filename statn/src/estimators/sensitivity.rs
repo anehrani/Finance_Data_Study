@@ -39,9 +39,7 @@ where
 
     for ivar in 0..nvars {
         // Reset params to optimal values
-        for i in 0..nvars {
-            params[i] = best[i];
-        }
+        params[..nvars].copy_from_slice(&best[..nvars]);
 
         let mut maxval = -1.0e60;
 

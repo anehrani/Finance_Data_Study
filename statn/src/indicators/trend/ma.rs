@@ -64,8 +64,8 @@ pub fn exponential_moving_average(data: &[f64], lags: usize) -> Vec<f64> {
     // Multiplier: 2 / (N + 1)
     let k = 2.0 / (lags as f64 + 1.0);
 
-    for i in lags..data.len() {
-        current_ema = (data[i] - current_ema) * k + current_ema;
+    for &price in data.iter().skip(lags) {
+        current_ema = (price - current_ema) * k + current_ema;
         ema.push(current_ema);
     }
 
@@ -104,7 +104,7 @@ pub fn compute_indicators(
 ) -> Vec<f64> {
     let mut inds = vec![0.0; nind];
     
-    for i in 0..nind {
+    for (i, ind_val) in inds.iter_mut().enumerate().take(nind) {
         let k = start_idx + i;
         
         // Compute short-term mean
@@ -121,7 +121,7 @@ pub fn compute_indicators(
         }
         long_mean /= long_term as f64;
         
-        inds[i] = short_mean - long_mean;
+        *ind_val = short_mean - long_mean;
     }
     
     inds

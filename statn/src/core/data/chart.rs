@@ -34,6 +34,10 @@ impl BarData {
         self.open.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.date.is_empty()
+    }
+
     pub fn push(&mut self, date: u32, open: f64, high: f64, low: f64, close: f64) {
         self.date.push(date);
         self.open.push(open);

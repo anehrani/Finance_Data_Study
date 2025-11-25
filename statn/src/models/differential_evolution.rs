@@ -325,7 +325,7 @@ where
             let dest_idx = ind * dim;
             
             // Create child
-            let start_param = (unifrand() * nvars as f64) as usize;
+            let _start_param = (unifrand() * nvars as f64) as usize;
             let mut used_mutated = false;
             
             // We construct the child in a temporary buffer first to avoid partial updates if we need to revert?

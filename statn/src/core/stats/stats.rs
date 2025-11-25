@@ -332,7 +332,7 @@ pub fn inverse_ibeta(p: f64, a: f64, b: f64) -> f64 {
 
 pub fn t_cdf(ndf: i32, t: f64) -> f64 {
     let mut prob = 1.0 - 0.5 * ibeta(0.5 * (ndf as f64), 0.5, (ndf as f64) / ((ndf as f64) + t * t));
-    prob = prob.max(0.0).min(1.0);
+    prob = prob.clamp(0.0, 1.0);
     if t >= 0.0 {
         prob
     } else {
@@ -1048,11 +1048,16 @@ impl OnlineStats {
 
     pub fn update(&mut self, y: &[f64]) {
         if self.n == 0 {
-            for i in 0..y.len() {
-                self.mean[i] = y[i];
-                self.sum2[i] = 0.0;
-                self.sum3[i] = 0.0;
-                self.sum4[i] = 0.0;
+            for (_i, (&y_val, (mean_val, (sum2_val, (sum3_val, sum4_val))))) in y.iter()
+                .zip(self.mean.iter_mut()
+                    .zip(self.sum2.iter_mut()
+                        .zip(self.sum3.iter_mut()
+                            .zip(self.sum4.iter_mut()))))
+                .enumerate() {
+                *mean_val = y_val;
+                *sum2_val = 0.0;
+                *sum3_val = 0.0;
+                *sum4_val = 0.0;
             }
             self.n = 1;
             return;
@@ -1060,18 +1065,24 @@ impl OnlineStats {
 
         let np1 = (self.n + 1) as f64;
 
-        for i in 0..y.len() {
-            self.delta[i] = y[i] - self.mean[i];
-            self.mean[i] += self.delta[i] / np1;
-            let dsquare = self.delta[i] * self.delta[i];
+        for (i, (&y_val, (delta_val, (mean_val, (sum2_val, (sum3_val, sum4_val)))))) in y.iter()
+            .zip(self.delta.iter_mut()
+                .zip(self.mean.iter_mut()
+                    .zip(self.sum2.iter_mut()
+                        .zip(self.sum3.iter_mut()
+                            .zip(self.sum4.iter_mut())))))
+            .enumerate() {
+            *delta_val = y_val - *mean_val;
+            *mean_val += *delta_val / np1;
+            let dsquare = *delta_val * *delta_val;
 
             let n_f = self.n as f64;
-            self.sum4[i] += n_f * (n_f * n_f - n_f + 1.0) * dsquare * dsquare / (np1 * np1 * np1);
-            self.sum4[i] += 6.0 * self.sum2[i] * dsquare / (np1 * np1);
-            self.sum4[i] -= 4.0 * self.sum3[i] * self.delta[i] / np1;
-            self.sum3[i] += n_f * (n_f - 1.0) * dsquare * self.delta[i] / (np1 * np1);
-            self.sum3[i] -= 3.0 * self.sum2[i] * self.delta[i] / np1;
-            self.sum2[i] += n_f * dsquare / np1;
+            *sum4_val += n_f * (n_f * n_f - n_f + 1.0) * dsquare * dsquare / (np1 * np1 * np1);
+            *sum4_val += 6.0 * *sum2_val * dsquare / (np1 * np1);
+            *sum4_val -= 4.0 * *sum3_val * *delta_val / np1;
+            *sum3_val += n_f * (n_f - 1.0) * dsquare * *delta_val / (np1 * np1);
+            *sum3_val -= 3.0 * *sum2_val * *delta_val / np1;
+            *sum2_val += n_f * dsquare / np1;
         }
 
         self.n += 1;
