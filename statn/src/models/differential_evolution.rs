@@ -62,86 +62,23 @@ where
     let mut best = vec![0.0; dim];
 
     // Generate the initial population
-    let mut failures = 0;
-    let mut n_evals = 0;
+    let mut failures;
+    let mut n_evals;
 
     if let Some(sb) = stoc_bias {
         sb.set_collecting(true);
     }
 
-    let mut grand_best = -1.0e60; // Initialize with a very small number
-    let mut worstf = 1.0e60;
-    let mut avgf = 0.0;
-
-    // We need to handle the "overinit" logic where we might process more than popsize individuals
-    // and keep the best ones.
-    // In the C++ code, it fills pop1, then uses the first slot of pop2 for temporary storage
-    // during overinit, replacing the worst in pop1 if better.
-
-    for ind in 0..(popsize + overinit) {
-        let popptr_idx = if ind < popsize {
-            ind * dim
-        } else {
-            0 // Use first slot of pop2 (which is separate from pop1)
-        };
-        
-        // We need a mutable slice to work with
-        let popptr = if ind < popsize {
-            &mut pop1[popptr_idx..popptr_idx + dim]
-        } else {
-            &mut pop2[0..dim]
-        };
-
-        for i in 0..nvars {
-            if i < nints {
-                popptr[i] = low_bounds[i]
-                    + (unifrand() * (high_bounds[i] - low_bounds[i] + 1.0)).floor();
-                if popptr[i] > high_bounds[i] {
-                    popptr[i] = high_bounds[i];
-                }
-            } else {
-                popptr[i] = low_bounds[i] + (unifrand() * (high_bounds[i] - low_bounds[i]));
-            }
-        }
-
-        let value = criter(&popptr[0..nvars], mintrades);
-        popptr[nvars] = value;
-        n_evals += 1;
-
-        if ind == 0 {
-            grand_best = value;
-            worstf = value;
-            avgf = value;
-            best.copy_from_slice(popptr);
-        }
-
-        if value <= 0.0
-            && n_evals > max_evals {
-                return Err("Exceeded max_evals with worthless individuals".to_string());
-            }
-            // In Rust loop, we can't easily "decrement ind".
-            // Instead, we'll just continue the loop but NOT count this as a valid individual
-            // if we haven't filled popsize yet.
-            // However, the C++ logic is: --ind; continue;
-            // This effectively retries the current slot.
-            // We can simulate this with a loop.
-            
-            // Actually, let's restructure this.
-            // We will have a separate loop for filling pop1, and then a loop for overinit.
-            // But wait, the C++ code mixes them.
-            // Let's stick to the C++ logic but handle the retry.
-            
-            // Since we can't modify the loop counter `ind`, we need to handle the "retry" logic differently.
-            // But wait, if we are in the `for` loop, we can't just retry.
-            // Let's use a `while` loop instead.
-    }
+    let mut grand_best;
+    let mut worstf;
+    let mut avgf;
     
-    // Re-implementing initialization with a while loop to handle retries
+    // Implementing initialization with a while loop to handle retries
     let mut ind = 0;
     n_evals = 0;
     failures = 0;
     
-    // Reset variables
+    // Initialize variables
     grand_best = -1.0e60;
     worstf = 1.0e60;
     avgf = 0.0;

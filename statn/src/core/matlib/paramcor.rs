@@ -8,7 +8,7 @@
 ///
 /// # Arguments
 /// * `data` - Ncases (rows) by nparams+1, where each row contains parameters
-///            followed by the function value
+///   followed by the function value
 /// * `nparams` - Number of parameters
 ///
 /// # Returns
@@ -116,7 +116,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
         let mut line = format!("{:11.3e} :", coefs[coef_idx]);
         coef_idx += 1;
 
-        for k in j..nparams {
+        for _k in j..nparams {
             line.push_str(&format!(" {:11.3e}", coefs[coef_idx]));
             coef_idx += 1;
         }
@@ -308,7 +308,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
 
             if d * d2 > 0.0 {
                 let mut corr = hessian_inv[i * nparams + k] / (d * d2);
-                corr = corr.max(-1.0).min(1.0);
+                corr = corr.clamp(-1.0, 1.0);
                 line.push_str(&format!(" {:12.3}", corr));
             } else {
                 line.push_str("        -----");

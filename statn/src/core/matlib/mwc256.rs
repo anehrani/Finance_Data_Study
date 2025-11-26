@@ -1,7 +1,6 @@
 /// MWC256 random number generator
 /// This is a random int generator suggested by Marsaglia in his DIEHARD suite.
 /// It provides a great combination of speed and quality.
-
 pub struct Mwc256 {
     q: [u32; 256],
     carry: u32,

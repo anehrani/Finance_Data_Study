@@ -356,7 +356,7 @@ pub fn inverse_t_cdf(ndf: i32, p: f64) -> f64 {
 
 pub fn f_cdf(ndf1: i32, ndf2: i32, f: f64) -> f64 {
     let mut prob = 1.0 - ibeta(0.5 * (ndf2 as f64), 0.5 * (ndf1 as f64), (ndf2 as f64) / ((ndf2 as f64) + (ndf1 as f64) * f));
-    prob = prob.max(0.0).min(1.0);
+    prob = prob.clamp(0.0, 1.0);
     prob
 }
 
@@ -418,7 +418,7 @@ pub fn ks_cdf(n: i32, dn: f64) -> f64 {
     }
 
     sum = 1.0 - 2.0 * sum;
-    sum = sum.max(0.0).min(1.0);
+    sum = sum.clamp(0.0, 1.0);
     sum
 }
 
@@ -444,19 +444,20 @@ pub fn t_test_one_sample(x: &[f64]) -> f64 {
 // Student's t test for two samples
 // ============================================================================
 
+#[allow(dead_code)]
 fn t_test_two_samples(x1: &[f64], x2: &[f64]) -> f64 {
     let n1 = x1.len() as f64;
     let n2 = x2.len() as f64;
-
     let mean1 = x1.iter().sum::<f64>() / n1;
     let mean2 = x2.iter().sum::<f64>() / n2;
-
-    let ss1: f64 = x1.iter().map(|xi| (xi - mean1).powi(2)).sum();
-    let ss2: f64 = x2.iter().map(|xi| (xi - mean2).powi(2)).sum();
-
-    let std = ((ss1 + ss2) / (n1 + n2 - 2.0) * (1.0 / n1 + 1.0 / n2)).sqrt();
-
-    (mean1 - mean2) / (std + 1e-60)
+    let var1 = x1.iter().map(|x| (x - mean1).powi(2)).sum::<f64>() / (n1 - 1.0);
+    let var2 = x2.iter().map(|x| (x - mean2).powi(2)).sum::<f64>() / (n2 - 1.0);
+    let pooled_var = ((n1 - 1.0) * var1 + (n2 - 1.0) * var2) / (n1 + n2 - 2.0);
+    let se = (pooled_var * (1.0 / n1 + 1.0 / n2)).sqrt();
+    if se.abs() < 1e-10 {
+        return 0.0;
+    }
+    (mean1 - mean2) / se
 }
 
 // ============================================================================
@@ -926,8 +927,8 @@ pub fn quantile_conf(n: i32, m: i32, conf: f64) -> f64 {
     }
 
     // Ridder's method
-    let mut x2 = 0.0;
-    let mut y2 = 0.0;
+    let mut x2 = 0.5 * (x1 + x3); // Initialize with midpoint
+    let mut y2;
 
     for _iter in 0..200 {
         x2 = 0.5 * (x1 + x3);
@@ -1064,13 +1065,12 @@ impl OnlineStats {
 
         let np1 = (self.n + 1) as f64;
 
-        for (i, (&y_val, (delta_val, (mean_val, (sum2_val, (sum3_val, sum4_val)))))) in y.iter()
+        for (&y_val, (delta_val, (mean_val, (sum2_val, (sum3_val, sum4_val))))) in y.iter()
             .zip(self.delta.iter_mut()
                 .zip(self.mean.iter_mut()
                     .zip(self.sum2.iter_mut()
                         .zip(self.sum3.iter_mut()
-                            .zip(self.sum4.iter_mut())))))
-            .enumerate() {
+                            .zip(self.sum4.iter_mut()))))) {
             *delta_val = y_val - *mean_val;
             *mean_val += *delta_val / np1;
             let dsquare = *delta_val * *delta_val;
