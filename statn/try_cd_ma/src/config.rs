@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use serde::Deserialize;
-use std::path::PathBuf;
+
 
 /// Configuration for CD_MA analysis
 #[derive(Debug, Clone, Deserialize, Parser)]
@@ -30,8 +30,8 @@ pub struct Config {
     pub data_file: String,
     
     /// Path to output results file
-    #[arg(long, default_value = "results/CD_MA.LOG")]
-    pub output_file: PathBuf,
+    #[arg(long, default_value = "results/")]
+    pub output_path: String,
     
     /// Number of test cases (default: 252 = one year)
     #[arg(long, default_value_t = 100)]
@@ -122,7 +122,7 @@ mod tests {
             n_short: 10,
             alpha: 0.5,
             data_file: "test.txt".to_string(),
-            output_file: PathBuf::from("output.log"),
+            output_path: "output.log".to_string(),
             n_test: 252,
             n_folds: 10,
             n_lambdas: 50,
@@ -147,7 +147,7 @@ mod tests {
             n_short: 10,
             alpha: 0.5,
             data_file: "test.txt".to_string(),
-            output_file: PathBuf::from("output.log"),
+            output_path: "output.log".to_string(),
             n_test: 252,
             n_folds: 10,
             n_lambdas: 50,

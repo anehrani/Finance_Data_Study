@@ -81,15 +81,47 @@ fn main() -> Result<()> {
         config.n_vars(),
     )?;
     
+    // Run backtest on test data
+    println!("\n{}", "=".repeat(60));
+    println!("Running Backtest");
+    println!("{}", "=".repeat(60));
+    
+    // Convert log prices to actual prices for backtesting
+    let test_prices_actual: Vec<f64> = split.test_data
+        .iter()
+        .skip(split.max_lookback)
+        .take(config.n_test)
+        .map(|&log_price| log_price.exp())
+        .collect();
+    
+    let backtest_config = backtesting::BacktestConfig {
+        initial_capital: 100_000.0,
+        transaction_cost: 0.001, // 0.1% transaction cost
+    };
+    
+    let backtest_result = try_cd_ma::run_backtest(
+        &training_result.model,
+        &test_prices_actual,
+        &test_data.data,
+        config.n_vars(),
+        &backtest_config,
+    )?;
+    
+    // Write backtest results
+    let backtest_output = format!("{}backtest_results.txt", config.output_path);
+    try_cd_ma::write_backtest_results(&backtest_output, &backtest_result)?;
+    
     // Write results
 
     // Save model
     println!("Saving model to model.json...");
-    training::save_model(&training_result.model, "model.json")?;
+    let model_path = format!("{}model.json", config.output_path);
+    training::save_model(&training_result.model, model_path)?;
     
     // Write results
+    let results_path = format!("{}CD_MA.LOG", config.output_path);
     write_results(
-        &config.output_file,
+        &results_path,
         &config,
         &training_result,
         &evaluation_result,
@@ -97,7 +129,10 @@ fn main() -> Result<()> {
     )?;
     
     // Print summary
-    println!("\nSummary:");
+    println!("\n{}", "=".repeat(60));
+    println!("Summary");
+    println!("{}", "=".repeat(60));
+    println!("\nModel Performance:");
     println!(
         "  In-sample explained variance: {:.3}%",
         100.0 * evaluation_result.in_sample_explained
@@ -105,6 +140,28 @@ fn main() -> Result<()> {
     println!(
         "  OOS total return: {:.5} ({:.3}%)",
         evaluation_result.oos_return, evaluation_result.oos_return_pct
+    );
+    
+    println!("\nBacktest Performance:");
+    println!(
+        "  Total return: {:.2}%",
+        backtest_result.metrics.get("ROI %").unwrap_or(&0.0)
+    );
+    println!(
+        "  Total trades: {}",
+        backtest_result.trades
+    );
+    println!(
+        "  Win rate: {:.2}%",
+        backtest_result.metrics.get("Win Rate %").unwrap_or(&0.0)
+    );
+    println!(
+        "  Max drawdown: {:.2}%",
+        backtest_result.metrics.get("Max Drawdown %").unwrap_or(&0.0)
+    );
+    println!(
+        "  Sharpe ratio: {:.3}",
+        backtest_result.metrics.get("Sharpe Ratio").unwrap_or(&0.0)
     );
     
     Ok(())
