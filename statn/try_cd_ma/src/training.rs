@@ -14,6 +14,7 @@ pub struct TrainingResult {
 }
 
 /// Train model with cross-validation to find optimal lambda
+#[allow(clippy::too_many_arguments)]
 pub fn train_with_cv(
     n_vars: usize,
     n_cases: usize,
@@ -96,4 +97,15 @@ mod tests {
         let result = result.unwrap();
         assert_eq!(result.lambda, 0.0);
     }
+}
+
+/// Save model to file
+pub fn save_model<P: AsRef<std::path::Path>>(model: &CoordinateDescent, path: P) -> Result<()> {
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = path.as_ref().parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let file = std::fs::File::create(path)?;
+    serde_json::to_writer(file, model)?;
+    Ok(())
 }

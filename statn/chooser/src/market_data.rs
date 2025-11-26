@@ -72,7 +72,7 @@ fn extract_market_name(file_path: &str) -> Result<String> {
     let without_ext = &file_path[..last_dot];
 
     // Find last path separator
-    let name_start = without_ext.rfind(|c| c == '\\' || c == '/' || c == ':')
+    let name_start = without_ext.rfind(['\\', '/', ':'])
         .map(|pos| pos + 1)
         .unwrap_or(0);
 
@@ -101,7 +101,7 @@ fn read_market_file(file_path: &str, market_name: &str) -> Result<MarketData> {
             continue;
         }
 
-        let fields: Vec<&str> = line.split(|c| c == ',' || c == ' ' || c == '\t')
+        let fields: Vec<&str> = line.split([',', ' ', '\t'])
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -117,7 +117,7 @@ fn read_market_file(file_path: &str, market_name: &str) -> Result<MarketData> {
         let month = (full_date % 10000) / 100;
         let day = full_date % 100;
 
-        if month < 1 || month > 12 || day < 1 || day > 31 || year < 1800 || year > 2030 {
+        if !(1..=12).contains(&month) || !(1..=31).contains(&day) || !(1800..=2030).contains(&year) {
             bail!("Invalid date {} in market file {} line {}", full_date, file_path, line_num + 1);
         }
 

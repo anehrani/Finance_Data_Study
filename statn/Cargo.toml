@@ -15,6 +15,7 @@ members = [
     "chooser",
     "per_what", "bound_mean", "bootstrap_rate", "conftest", "bnd_ret", "drawdown",
     "montecarlo_permutation_test",
+    "src/backtesting",
 ]
 
 [package]
@@ -34,9 +35,9 @@ finance_tools = { path = "src/finance_tools" }
 [dev-dependencies]
 tempfile = "3.10"
 
-# [[bin]]
-# name = "boot"
-# path = "src/boot/main.rs"
+#[[bin]]
+#name = "try_cd_ma"
+#path = "try_cd_ma/main.rs"
 
 # [[bin]]
 # name = "cscv"

@@ -38,11 +38,10 @@ pub fn criter(
         )
     };
 
-    if let Some(sb) = stoc_bias {
-        if ret_val > 0.0 {
+    if let Some(sb) = stoc_bias
+        && ret_val > 0.0 {
             sb.process();
         }
-    }
 
     if ntrades >= mintrades {
         ret_val
@@ -86,11 +85,10 @@ pub fn criter_enhanced(
         )
     };
 
-    if let Some(sb) = stoc_bias {
-        if ret_val > 0.0 {
+    if let Some(sb) = stoc_bias
+        && ret_val > 0.0 {
             sb.process();
         }
-    }
 
     if ntrades >= mintrades {
         ret_val

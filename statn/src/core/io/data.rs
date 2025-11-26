@@ -20,7 +20,9 @@ pub fn split_train_test(
     max_lookback: usize,
     n_test: usize,
 ) -> Result<DataSplit, String> {
-    let total_needed = max_lookback + n_test + 1;
+    // Need max_lookback + n_test + 1 for test data (extra 1 for computing targets)
+    // Plus enough for training
+    let total_needed = max_lookback + n_test + 1 + max_lookback + 1;
     
     if data.len() < total_needed {
         return Err(format!(
@@ -29,10 +31,13 @@ pub fn split_train_test(
         ));
     }
     
-    let n_train = data.len() - n_test - max_lookback;
+    // Calculate how much data to allocate to training
+    // We want: train_data has enough for training, test_data has max_lookback + n_test + 1
+    let test_data_len = max_lookback + n_test + 1;
+    let n_train = data.len() - test_data_len;
     
-    // Training data: from start to (start + max_lookback + n_train)
-    let train_end = max_lookback + n_train;
+    // Training data: from start to n_train + max_lookback
+    let train_end = n_train + max_lookback;
     let train_data = data[..train_end].to_vec();
     
     // Test data: from (train_end - max_lookback) to end

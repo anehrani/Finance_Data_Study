@@ -6,132 +6,79 @@ use crate::estimators::stochastic_bias::StocBias;
 
 /// Differential evolution optimization
 ///
+/// Configuration for differential evolution
+pub struct DiffEvConfig<'a> {
+    pub nvars: usize,
+    pub nints: usize,
+    pub popsize: usize,
+    pub overinit: usize,
+    pub mintrades: i32,
+    pub max_evals: usize,
+    pub max_bad_gen: usize,
+    pub mutate_dev: f64,
+    pub pcross: f64,
+    pub pclimb: f64,
+    pub low_bounds: &'a [f64],
+    pub high_bounds: &'a [f64],
+    pub print_progress: bool,
+}
+
+/// Differential evolution optimization
+///
 /// # Arguments
 /// * `criter` - Criterion function to be maximized. Takes parameters and mintrades.
-/// * `nvars` - Number of variables
-/// * `nints` - Number of first variables that are integers
-/// * `popsize` - Population size (should be 5-10 times nvars)
-/// * `overinit` - Overinitialization for initial population
-/// * `mintrades` - Minimum number of trades for candidate system
-/// * `max_evals` - Max number of failed initial performance evaluations
-/// * `max_bad_gen` - Max number of contiguous generations with no improvement of best
-/// * `mutate_dev` - Deviation for differential mutation (0.4 to 1.2)
-/// * `pcross` - Probability of crossover (0.0 to 1.0)
-/// * `pclimb` - Probability of taking a hill-climbing step
-/// * `low_bounds` - Lower bounds for parameters
-/// * `high_bounds` - Upper bounds for parameters
-/// * `print_progress` - Print progress to screen?
+/// * `config` - Configuration struct containing all parameters
 /// * `stoc_bias` - Optional stochastic bias estimator
 ///
 /// # Returns
 /// A Result containing the best parameters found (with criterion value at end) or an error message.
 pub fn diff_ev<F>(
     criter: F,
-    nvars: usize,
-    nints: usize,
-    popsize: usize,
-    overinit: usize,
-    mut mintrades: i32,
-    max_evals: usize,
-    max_bad_gen: usize,
-    mutate_dev: f64,
-    pcross: f64,
-    pclimb: f64,
-    low_bounds: &[f64],
-    high_bounds: &[f64],
-    print_progress: bool,
+    config: DiffEvConfig,
     stoc_bias: &mut Option<StocBias>,
 ) -> Result<Vec<f64>, String>
 where
     F: Fn(&[f64], i32) -> f64 + Copy,
 {
+    let DiffEvConfig {
+        nvars,
+        nints,
+        popsize,
+        overinit,
+        mut mintrades,
+        max_evals,
+        max_bad_gen,
+        mutate_dev,
+        pcross,
+        pclimb,
+        low_bounds,
+        high_bounds,
+        print_progress,
+    } = config;
+
     let dim = nvars + 1; // Each case is nvars variables plus criterion
     let mut pop1 = vec![0.0; dim * popsize];
     let mut pop2 = vec![0.0; dim * popsize];
     let mut best = vec![0.0; dim];
 
     // Generate the initial population
-    let mut failures = 0;
-    let mut n_evals = 0;
+    let mut failures;
+    let mut n_evals;
 
     if let Some(sb) = stoc_bias {
         sb.set_collecting(true);
     }
 
-    let mut grand_best = -1.0e60; // Initialize with a very small number
-    let mut worstf = 1.0e60;
-    let mut avgf = 0.0;
-
-    // We need to handle the "overinit" logic where we might process more than popsize individuals
-    // and keep the best ones.
-    // In the C++ code, it fills pop1, then uses the first slot of pop2 for temporary storage
-    // during overinit, replacing the worst in pop1 if better.
-
-    for ind in 0..(popsize + overinit) {
-        let mut popptr_idx = if ind < popsize {
-            ind * dim
-        } else {
-            0 // Use first slot of pop2 (which is separate from pop1)
-        };
-        
-        // We need a mutable slice to work with
-        let popptr = if ind < popsize {
-            &mut pop1[popptr_idx..popptr_idx + dim]
-        } else {
-            &mut pop2[0..dim]
-        };
-
-        for i in 0..nvars {
-            if i < nints {
-                popptr[i] = low_bounds[i]
-                    + (unifrand() * (high_bounds[i] - low_bounds[i] + 1.0)).floor();
-                if popptr[i] > high_bounds[i] {
-                    popptr[i] = high_bounds[i];
-                }
-            } else {
-                popptr[i] = low_bounds[i] + (unifrand() * (high_bounds[i] - low_bounds[i]));
-            }
-        }
-
-        let value = criter(&popptr[0..nvars], mintrades);
-        popptr[nvars] = value;
-        n_evals += 1;
-
-        if ind == 0 {
-            grand_best = value;
-            worstf = value;
-            avgf = value;
-            best.copy_from_slice(popptr);
-        }
-
-        if value <= 0.0 {
-            if n_evals > max_evals {
-                return Err("Exceeded max_evals with worthless individuals".to_string());
-            }
-            // In Rust loop, we can't easily "decrement ind".
-            // Instead, we'll just continue the loop but NOT count this as a valid individual
-            // if we haven't filled popsize yet.
-            // However, the C++ logic is: --ind; continue;
-            // This effectively retries the current slot.
-            // We can simulate this with a loop.
-            
-            // Actually, let's restructure this.
-            // We will have a separate loop for filling pop1, and then a loop for overinit.
-            // But wait, the C++ code mixes them.
-            // Let's stick to the C++ logic but handle the retry.
-            
-            // Since we can't modify the loop counter `ind`, we need to handle the "retry" logic differently.
-            // But wait, if we are in the `for` loop, we can't just retry.
-            // Let's use a `while` loop instead.
-        }
-    }
+    let mut grand_best;
+    let mut worstf;
+    let mut avgf;
     
-    // Re-implementing initialization with a while loop to handle retries
+    // Implementing initialization with a while loop to handle retries
     let mut ind = 0;
     n_evals = 0;
     failures = 0;
     
-    // Reset variables
+    // Initialize variables
     grand_best = -1.0e60;
     worstf = 1.0e60;
     avgf = 0.0;
@@ -224,8 +171,8 @@ where
                 avg,
                 n_evals as f64 / (ind as f64 + 1.0)
             );
-            for i in 0..nvars {
-                print!(" {:.4}", current_ind[i]);
+            for val in current_ind.iter().take(nvars) {
+                print!(" {:.4}", val);
             }
         }
 
@@ -326,7 +273,7 @@ where
             let dest_idx = ind * dim;
             
             // Create child
-            let start_param = (unifrand() * nvars as f64) as usize;
+            let _start_param = (unifrand() * nvars as f64) as usize;
             let mut used_mutated = false;
             
             // We construct the child in a temporary buffer first to avoid partial updates if we need to revert?
@@ -383,9 +330,7 @@ where
                 }
             } else {
                 // Copy parent1 to dest
-                for x in 0..dim {
-                    pop2[dest_idx + x] = pop1[p1_idx + x];
-                }
+                pop2[dest_idx..(dim + dest_idx)].copy_from_slice(&pop1[p1_idx..(dim + p1_idx)]);
                 child_val = parent_val;
             }
             
@@ -536,7 +481,7 @@ where
                     // We need to pass a closure to glob_max and brentmax that modifies ONLY the k_var parameter
                     // But we can't easily capture a mutable slice.
                     // We can copy the parameters to a temporary vector.
-                    let mut temp_params = pop2[dest_idx..dest_idx+nvars].to_vec();
+                    let temp_params = pop2[dest_idx..dest_idx+nvars].to_vec();
                     
                     let c_func = |param: f64| -> f64 {
                         let mut my_params = temp_params.clone();
@@ -597,8 +542,8 @@ where
 
         if print_progress {
             print!("\nGen {} Best={:.4} Worst={:.4} Avg={:.4}", generation, grand_best, worstf, avgf / popsize as f64);
-            for i in 0..nvars {
-                print!(" {:.4}", best[i]);
+            for val in best.iter().take(nvars) {
+                print!(" {:.4}", val);
             }
         }
         
@@ -684,21 +629,25 @@ mod tests {
         let low_bounds = vec![-5.0; nvars];
         let high_bounds = vec![5.0; nvars];
         
+        let config = DiffEvConfig {
+            nvars,
+            nints: 0,
+            popsize: 50,
+            overinit: 0,
+            mintrades: 10,
+            max_evals: 10000,
+            max_bad_gen: 100,
+            mutate_dev: 0.5,
+            pcross: 0.5,
+            pclimb: 0.0,
+            low_bounds: &low_bounds,
+            high_bounds: &high_bounds,
+            print_progress: false,
+        };
+        
         let result = diff_ev(
             criter,
-            nvars,
-            0, // nints
-            50, // popsize
-            0, // overinit
-            10, // mintrades
-            10000, // max_evals
-            100, // max_bad_gen
-            0.5, // mutate_dev
-            0.5, // pcross
-            0.0, // pclimb
-            &low_bounds,
-            &high_bounds,
-            false, // print_progress
+            config,
             &mut None, // stoc_bias
         );
         

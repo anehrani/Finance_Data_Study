@@ -1,4 +1,4 @@
-pub use stats::{lgamma, ibeta, orderstat_tail, quantile_conf};
+pub use stats::{orderstat_tail, quantile_conf};
 
 #[cfg(test)]
 mod tests {

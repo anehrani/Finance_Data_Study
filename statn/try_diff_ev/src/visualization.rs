@@ -50,7 +50,7 @@ pub fn visualise_signals<P: AsRef<Path>>(
             &BLUE,
         ))?
         .label("Price")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
 
     // Plot BUY markers (green upward triangles).
     chart.draw_series(
@@ -90,9 +90,9 @@ pub fn visualise_signals<P: AsRef<Path>>(
                 &MAGENTA,
             ))?
             .label("Wealth")
-            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &MAGENTA));
+            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], MAGENTA));
     }
 
-    chart.configure_series_labels().border_style(&BLACK).draw()?;
+    chart.configure_series_labels().border_style(BLACK).draw()?;
     Ok(())
 }

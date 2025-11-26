@@ -53,7 +53,7 @@ pub fn qsortd(first: usize, last: usize, data: &mut [f64]) {
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -64,18 +64,14 @@ pub fn qsortd(first: usize, last: usize, data: &mut [f64]) {
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -103,7 +99,7 @@ pub fn qsortds(first: usize, last: usize, data: &mut [f64], slave: &mut [f64]) {
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -114,19 +110,15 @@ pub fn qsortds(first: usize, last: usize, data: &mut [f64], slave: &mut [f64]) {
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -160,7 +152,7 @@ pub fn qsortds2(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -171,20 +163,16 @@ pub fn qsortds2(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -219,7 +207,7 @@ pub fn qsortds3(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -230,21 +218,17 @@ pub fn qsortds3(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
             slave3.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -280,7 +264,7 @@ pub fn qsortds4(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -291,9 +275,7 @@ pub fn qsortds4(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
@@ -301,12 +283,10 @@ pub fn qsortds4(
             slave4.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -324,6 +304,7 @@ pub fn qsortds4(
    QSORT with five slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds5(
     first: usize,
     last: usize,
@@ -343,7 +324,7 @@ pub fn qsortds5(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -354,9 +335,7 @@ pub fn qsortds5(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
@@ -365,12 +344,10 @@ pub fn qsortds5(
             slave5.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -388,6 +365,7 @@ pub fn qsortds5(
    QSORT with six slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds6(
     first: usize,
     last: usize,
@@ -408,7 +386,7 @@ pub fn qsortds6(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -419,9 +397,7 @@ pub fn qsortds6(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
@@ -431,12 +407,10 @@ pub fn qsortds6(
             slave6.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -454,6 +428,7 @@ pub fn qsortds6(
    QSORT with seven slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds7(
     first: usize,
     last: usize,
@@ -475,7 +450,7 @@ pub fn qsortds7(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -486,9 +461,7 @@ pub fn qsortds7(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
@@ -499,12 +472,10 @@ pub fn qsortds7(
             slave7.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -522,6 +493,7 @@ pub fn qsortds7(
    QSORT with eight slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds8(
     first: usize,
     last: usize,
@@ -544,7 +516,7 @@ pub fn qsortds8(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -555,9 +527,7 @@ pub fn qsortds8(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
@@ -569,12 +539,10 @@ pub fn qsortds8(
             slave8.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -592,6 +560,7 @@ pub fn qsortds8(
    QSORT with nine slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds9(
     first: usize,
     last: usize,
@@ -615,7 +584,7 @@ pub fn qsortds9(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -626,9 +595,7 @@ pub fn qsortds9(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
@@ -641,12 +608,10 @@ pub fn qsortds9(
             slave9.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -680,7 +645,7 @@ pub fn qsortdsi(first: usize, last: usize, data: &mut [f64], slave: &mut [i32]) 
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -691,19 +656,15 @@ pub fn qsortdsi(first: usize, last: usize, data: &mut [f64], slave: &mut [i32]) 
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -731,7 +692,7 @@ pub fn qsortds64(first: usize, last: usize, data: &mut [f64], slave: &mut [u64])
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -742,19 +703,15 @@ pub fn qsortds64(first: usize, last: usize, data: &mut [f64], slave: &mut [u64])
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -788,7 +745,7 @@ pub fn qsortdsri(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -799,20 +756,16 @@ pub fn qsortdsri(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -846,7 +799,7 @@ pub fn qsortdsii(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -857,20 +810,16 @@ pub fn qsortdsii(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             slave2.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -898,7 +847,7 @@ pub fn qsorti(first: usize, last: usize, data: &mut [i32]) {
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -909,18 +858,14 @@ pub fn qsorti(first: usize, last: usize, data: &mut [i32]) {
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -948,7 +893,7 @@ pub fn qsortisi(first: usize, last: usize, data: &mut [i32], slave: &mut [i32]) 
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -959,19 +904,15 @@ pub fn qsortisi(first: usize, last: usize, data: &mut [i32], slave: &mut [i32]) 
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -999,7 +940,7 @@ pub fn qsortisd(first: usize, last: usize, data: &mut [i32], slave: &mut [f64]) 
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -1010,19 +951,15 @@ pub fn qsortisd(first: usize, last: usize, data: &mut [i32], slave: &mut [f64]) 
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -1056,7 +993,7 @@ pub fn qsortissii(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -1067,20 +1004,16 @@ pub fn qsortissii(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave1.swap(lower, upper);
             slave2.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -1114,7 +1047,7 @@ pub fn qsort64ssii(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -1125,20 +1058,16 @@ pub fn qsort64ssii(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave1.swap(lower, upper);
             slave2.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }
@@ -1174,7 +1103,7 @@ pub fn qsortid4(
     let split = data[(first + last) / 2];
 
     loop {
-        while lower <= data.len() - 1 && split > data[lower] {
+        while lower < data.len() && split > data[lower] {
             lower += 1;
         }
         while upper > 0 && split < data[upper] {
@@ -1185,9 +1114,7 @@ pub fn qsortid4(
             if lower < data.len() - 1 {
                 lower += 1;
             }
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         } else if lower < upper {
             slave1.swap(lower, upper);
             slave2.swap(lower, upper);
@@ -1195,12 +1122,10 @@ pub fn qsortid4(
             slave4.swap(lower, upper);
             data.swap(lower, upper);
             lower += 1;
-            if upper > 0 {
-                upper -= 1;
-            }
+            upper = upper.saturating_sub(1);
         }
 
-        if !(lower <= upper) {
+        if lower > upper {
             break;
         }
     }

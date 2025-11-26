@@ -1,4 +1,7 @@
 //! Backtesting module for simulating trading strategies.
+//! 
+//! This module now uses the common backtesting library from statn/src/backtesting
+//! while maintaining backward compatibility with the existing API.
 
 use crate::signals_generators::SignalResult;
 
@@ -56,8 +59,8 @@ pub struct TradeLog {
 
 /// Backtest a trading strategy based on generated signals.
 ///
-/// Simulates trading with an initial budget, tracking positions, costs, and performance.
-/// Note: prices should be in log space (as used in the system).
+/// This function now uses the common backtesting library while maintaining
+/// the same API and behavior as the original implementation.
 ///
 /// # Arguments
 /// * `result` - The signal result containing prices and signals
@@ -71,214 +74,51 @@ pub fn backtest_signals(
     initial_budget: f64,
     transaction_cost_pct: f64,
 ) -> TradeStats {
-    let mut budget = initial_budget;
-    let mut position: i32 = 0; // 0 = flat, 1 = long, -1 = short
-    let mut entry_price = 0.0;
-    let mut num_trades = 0;
-    let mut num_wins = 0;
-    let mut num_losses = 0;
-    let mut total_costs = 0.0;
-    let mut peak_budget = initial_budget;
-    let mut max_drawdown = 0.0;
-    
-    let mut budget_history = Vec::with_capacity(result.prices.len());
-    let mut position_history = Vec::with_capacity(result.prices.len());
-    let mut returns = Vec::new();
-    let mut trades = Vec::new();
-    
-    // Track trade entry details
-    let mut current_entry_idx = 0;
-
-    for i in 0..result.prices.len() {
-        let price = result.prices[i].exp(); // Convert from log space to actual price
-        let signal = result.signals[i];
-        
-        // Record current state
-        budget_history.push(budget);
-        position_history.push(position);
-        
-        // Process signal
-        match (position, signal) {
-            // Currently flat, got BUY signal -> go long
-            (0, 1) => {
-                let cost = budget * transaction_cost_pct / 100.0;
-                total_costs += cost;
-                budget -= cost;
-                entry_price = price;
-                current_entry_idx = i;
-                position = 1;
-                num_trades += 1;
-            }
-            // Currently flat, got SELL signal -> go short
-            (0, -1) => {
-                let cost = budget * transaction_cost_pct / 100.0;
-                total_costs += cost;
-                budget -= cost;
-                entry_price = price;
-                current_entry_idx = i;
-                position = -1;
-                num_trades += 1;
-            }
-            // Currently long, got SELL signal -> close long and go short
-            (1, -1) => {
-                // Close long position
-                let pnl = budget * (price / entry_price - 1.0);
-                let cost = budget * transaction_cost_pct / 100.0;
-                budget += pnl - cost;
-                total_costs += cost;
-                
-                if pnl > 0.0 {
-                    num_wins += 1;
-                } else {
-                    num_losses += 1;
-                }
-                returns.push(pnl / budget);
-                
-                // Record trade
-                trades.push(TradeLog {
-                    entry_index: current_entry_idx,
-                    entry_price,
-                    exit_index: i,
-                    exit_price: price,
-                    trade_type: "LONG".to_string(),
-                    pnl,
-                    return_pct: (price / entry_price - 1.0) * 100.0,
-                });
-
-                // Open short position
-                let cost2 = budget * transaction_cost_pct / 100.0;
-                total_costs += cost2;
-                budget -= cost2;
-                entry_price = price;
-                current_entry_idx = i;
-                position = -1;
-                num_trades += 2;
-            }
-            // Currently short, got BUY signal -> close short and go long
-            (-1, 1) => {
-                // Close short position
-                let pnl = budget * (entry_price / price - 1.0);
-                let cost = budget * transaction_cost_pct / 100.0;
-                budget += pnl - cost;
-                total_costs += cost;
-                
-                if pnl > 0.0 {
-                    num_wins += 1;
-                } else {
-                    num_losses += 1;
-                }
-                returns.push(pnl / budget);
-                
-                // Record trade
-                trades.push(TradeLog {
-                    entry_index: current_entry_idx,
-                    entry_price,
-                    exit_index: i,
-                    exit_price: price,
-                    trade_type: "SHORT".to_string(),
-                    pnl,
-                    return_pct: (entry_price / price - 1.0) * 100.0,
-                });
-
-                // Open long position
-                let cost2 = budget * transaction_cost_pct / 100.0;
-                total_costs += cost2;
-                budget -= cost2;
-                entry_price = price;
-                current_entry_idx = i;
-                position = 1;
-                num_trades += 2;
-            }
-            // Currently long, got HOLD -> update unrealized P&L
-            (1, 0) => {
-                // Mark-to-market (unrealized)
-                let unrealized_pnl = budget * (price / entry_price - 1.0);
-                let current_value = budget + unrealized_pnl;
-                budget_history[i] = current_value;
-            }
-            // Currently short, got HOLD -> update unrealized P&L
-            (-1, 0) => {
-                // Mark-to-market (unrealized)
-                let unrealized_pnl = budget * (entry_price / price - 1.0);
-                let current_value = budget + unrealized_pnl;
-                budget_history[i] = current_value;
-            }
-            _ => {} // No action needed
-        }
-        
-        // Track drawdown
-        if budget_history[i] > peak_budget {
-            peak_budget = budget_history[i];
-        }
-        let drawdown = (peak_budget - budget_history[i]) / peak_budget;
-        if drawdown > max_drawdown {
-            max_drawdown = drawdown;
-        }
-    }
-    
-    // Close any open position at the end
-    if position != 0 {
-        let final_price = result.prices[result.prices.len() - 1].exp();
-        let pnl = if position == 1 {
-            budget * (final_price / entry_price - 1.0)
-        } else {
-            budget * (entry_price / final_price - 1.0)
-        };
-        let cost = budget * transaction_cost_pct / 100.0;
-        budget += pnl - cost;
-        total_costs += cost;
-        
-        if pnl > 0.0 {
-            num_wins += 1;
-        } else {
-            num_losses += 1;
-        }
-        returns.push(pnl / budget);
-        
-        trades.push(TradeLog {
-            entry_index: current_entry_idx,
-            entry_price,
-            exit_index: result.prices.len() - 1,
-            exit_price: final_price,
-            trade_type: if position == 1 { "LONG".to_string() } else { "SHORT".to_string() },
-            pnl,
-            return_pct: if position == 1 { 
-                (final_price / entry_price - 1.0) * 100.0 
-            } else { 
-                (entry_price / final_price - 1.0) * 100.0 
-            },
-        });
-        
-        num_trades += 1;
-    }
-    
-    let total_pnl = budget - initial_budget;
-    let roi_percent = (total_pnl / initial_budget) * 100.0;
-    let win_rate = if num_trades > 0 {
-        (num_wins as f64 / (num_wins + num_losses) as f64) * 100.0
-    } else {
-        0.0
+    // Create backtesting configuration
+    let config = backtesting::BacktestConfig {
+        initial_capital: initial_budget,
+        transaction_cost: transaction_cost_pct / 100.0, // Convert from percentage to fraction
     };
     
-    // Calculate Sharpe ratio (annualized, assuming daily data)
-    let sharpe_ratio = if !returns.is_empty() {
-        let mean_return = returns.iter().sum::<f64>() / returns.len() as f64;
-        let variance = returns.iter()
-            .map(|r| (r - mean_return).powi(2))
-            .sum::<f64>() / returns.len() as f64;
-        let std_dev = variance.sqrt();
-        if std_dev > 0.0 {
-            (mean_return / std_dev) * (252.0_f64).sqrt() // Annualized
-        } else {
-            0.0
-        }
-    } else {
-        0.0
-    };
+    // Run backtest using the common library
+    // Note: prices in result are in log space
+    let backtest_result = backtesting::run_backtest_discrete(
+        &result.prices,
+        &result.signals,
+        &config,
+        true, // prices_in_log_space = true
+    ).expect("Backtesting failed");
+    
+    // Convert BacktestResult to TradeStats for backward compatibility
+    let final_budget = backtest_result.equity_curve.last().copied().unwrap_or(initial_budget);
+    let total_pnl = final_budget - initial_budget;
+    let roi_percent = backtest_result.metrics.get("ROI %").copied().unwrap_or(0.0);
+    let num_trades = backtest_result.trades;
+    let num_wins = backtest_result.metrics.get("Winning Trades").copied().unwrap_or(0.0) as usize;
+    let num_losses = backtest_result.metrics.get("Losing Trades").copied().unwrap_or(0.0) as usize;
+    let win_rate = backtest_result.metrics.get("Win Rate %").copied().unwrap_or(0.0);
+    let total_costs = backtest_result.metrics.get("Total Costs").copied().unwrap_or(0.0);
+    let max_drawdown = backtest_result.metrics.get("Max Drawdown %").copied().unwrap_or(0.0);
+    let sharpe_ratio = backtest_result.metrics.get("Sharpe Ratio").copied().unwrap_or(0.0);
+    
+    // Convert trade logs
+    let trades = backtest_result.trade_log
+        .unwrap_or_default()
+        .into_iter()
+        .map(|t| TradeLog {
+            entry_index: t.entry_index,
+            entry_price: t.entry_price,
+            exit_index: t.exit_index,
+            exit_price: t.exit_price,
+            trade_type: t.trade_type,
+            pnl: t.pnl,
+            return_pct: t.return_pct,
+        })
+        .collect();
     
     TradeStats {
         initial_budget,
-        final_budget: budget,
+        final_budget,
         total_pnl,
         roi_percent,
         num_trades,
@@ -286,10 +126,10 @@ pub fn backtest_signals(
         num_losses,
         win_rate,
         total_costs,
-        max_drawdown: max_drawdown * 100.0, // Convert to percentage
+        max_drawdown,
         sharpe_ratio,
-        budget_history,
-        position_history,
+        budget_history: backtest_result.equity_curve,
+        position_history: backtest_result.position_history.unwrap_or_default(),
         trades,
     }
 }

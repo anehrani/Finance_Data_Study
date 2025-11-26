@@ -49,17 +49,18 @@ fn main() {
     let low_bounds = vec![-5.0, -5.0, -5.0];
     let high_bounds = vec![5.0, 5.0, 5.0];
 
-    match sensitivity(
-        sphere_function,
+    let config = statn::estimators::sensitivity::SensitivityConfig {
         nvars,
         nints,
-        20,  // npoints
-        60,  // nres (histogram width)
-        10,  // mintrades (not used in this example)
-        &best,
-        &low_bounds,
-        &high_bounds,
-    ) {
+        npoints: 20,
+        nres: 60,
+        mintrades: 10,
+        best: &best,
+        low_bounds: &low_bounds,
+        high_bounds: &high_bounds,
+    };
+
+    match sensitivity(sphere_function, config) {
         Ok(_) => println!("✓ Sensitivity analysis completed. Results saved to SENS.LOG\n"),
         Err(e) => println!("✗ Error: {}\n", e),
     }
@@ -72,17 +73,18 @@ fn main() {
     let low_bounds = vec![0.0, 0.0, 0.0];
     let high_bounds = vec![10.0, 10.0, 10.0];
 
-    match sensitivity(
-        quadratic_function,
+    let config = statn::estimators::sensitivity::SensitivityConfig {
         nvars,
         nints,
-        15,  // npoints
-        50,  // nres
-        10,  // mintrades
-        &best,
-        &low_bounds,
-        &high_bounds,
-    ) {
+        npoints: 15,
+        nres: 50,
+        mintrades: 10,
+        best: &best,
+        low_bounds: &low_bounds,
+        high_bounds: &high_bounds,
+    };
+
+    match sensitivity(quadratic_function, config) {
         Ok(_) => println!("✓ Sensitivity analysis completed. Results saved to SENS.LOG\n"),
         Err(e) => println!("✗ Error: {}\n", e),
     }
@@ -95,17 +97,18 @@ fn main() {
     let low_bounds = vec![-2.0, -2.0];
     let high_bounds = vec![3.0, 3.0];
 
-    match sensitivity(
-        rosenbrock_function,
+    let config = statn::estimators::sensitivity::SensitivityConfig {
         nvars,
         nints,
-        25,  // npoints
-        70,  // nres
-        10,  // mintrades
-        &best,
-        &low_bounds,
-        &high_bounds,
-    ) {
+        npoints: 25,
+        nres: 70,
+        mintrades: 10,
+        best: &best,
+        low_bounds: &low_bounds,
+        high_bounds: &high_bounds,
+    };
+
+    match sensitivity(rosenbrock_function, config) {
         Ok(_) => println!("✓ Sensitivity analysis completed. Results saved to SENS.LOG\n"),
         Err(e) => println!("✗ Error: {}\n", e),
     }

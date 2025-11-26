@@ -96,12 +96,28 @@ fn main() {
                 }
             };
             
+            
             println!("Running differential evolution...");
+            
+            let config = statn::models::differential_evolution::DiffEvConfig {
+                nvars: 4,
+                nints: 1,
+                popsize: 100,
+                overinit: max_gens,
+                mintrades: min_trades,
+                max_evals: 10000000,
+                max_bad_gen: popsize,
+                mutate_dev: 0.2,
+                pcross: 0.2,
+                pclimb: 0.3,
+                low_bounds: &low_bounds,
+                high_bounds: &high_bounds,
+                print_progress: verbose,
+            };
+            
             let result = diff_ev(
                 criter_wrapper,
-                4, 1, 100, max_gens, min_trades, 10000000,
-                popsize, 0.2, 0.2, 0.3,
-                &low_bounds, &high_bounds, verbose,
+                config,
                 &mut stoc_bias_opt,
             );
             
@@ -134,13 +150,24 @@ fn main() {
                     
                     // Sensitivity analysis
                     println!("\nRunning sensitivity analysis...");
+                    
+                    let sens_config = statn::estimators::sensitivity::SensitivityConfig {
+                        nvars: 4,
+                        nints: 1,
+                        npoints: 30,
+                        nres: 80,
+                        mintrades: min_trades,
+                        best: &params,
+                        low_bounds: &low_bounds,
+                        high_bounds: &high_bounds,
+                    };
+                    
                     let _ = sensitivity(
                         |p, m| match generator.as_str() {
                             "log_diff" | "enhanced" => criter_enhanced(p, m, &train_data, &mut None),
                             _ => criter(p, m, &train_data, &mut None),
                         },
-                        4, 1, 30, 80, min_trades, &params,
-                        &low_bounds, &high_bounds,
+                        sens_config,
                     );
                     println!("✓ Sensitivity saved to SENS.LOG");
                 }

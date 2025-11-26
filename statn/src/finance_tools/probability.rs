@@ -38,14 +38,16 @@ pub fn clean_tails(raw: &mut [f64], tail_frac: f64) {
     }
 
     let minval = work[best_start];
-    let mut maxval = work[best_stop];
+    let maxval = work[best_stop];
 
     if maxval <= minval {
-        maxval *= 1.0 + 1e-10;
+        let maxval_adj = minval * (1.0 + 1e-10);
         let minval_adj = minval * (1.0 - 1e-10);
         for item in raw.iter_mut() {
             if *item < minval_adj {
                 *item = minval_adj;
+            } else if *item > maxval_adj {
+                *item = maxval_adj;
             }
         }
         return;
