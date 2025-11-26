@@ -1,5 +1,18 @@
 use std::io;
 
+
+/// Configuration for sensitivity analysis
+pub struct SensitivityConfig<'a> {
+    pub nvars: usize,
+    pub nints: usize,
+    pub npoints: usize,
+    pub nres: usize,
+    pub mintrades: i32,
+    pub best: &'a [f64],
+    pub low_bounds: &'a [f64],
+    pub high_bounds: &'a [f64],
+}
+
 /// Compute and print parameter sensitivity curves
 ///
 /// This function evaluates how the criterion function varies as each parameter
@@ -8,31 +21,28 @@ use std::io;
 ///
 /// # Arguments
 /// * `criter` - Criterion function to evaluate. Takes parameters and mintrades.
-/// * `nvars` - Number of variables
-/// * `nints` - Number of first variables that are integers
-/// * `npoints` - Number of points at which to evaluate performance
-/// * `nres` - Number of resolved points across plot (histogram width)
-/// * `mintrades` - Minimum number of trades
-/// * `best` - Optimal parameters found
-/// * `low_bounds` - Lower bounds for parameters
-/// * `high_bounds` - Upper bounds for parameters
+/// * `config` - Configuration struct containing all parameters
 ///
 /// # Returns
 /// `Ok(())` on success, or an IO error if file writing fails
 pub fn sensitivity<F>(
     mut criter: F,
-    nvars: usize,
-    nints: usize,
-    npoints: usize,
-    nres: usize,
-    mintrades: i32,
-    best: &[f64],
-    low_bounds: &[f64],
-    high_bounds: &[f64],
+    config: SensitivityConfig,
 ) -> io::Result<()>
 where
     F: FnMut(&[f64], i32) -> f64,
 {
+    let SensitivityConfig {
+        nvars,
+        nints,
+        npoints,
+        nres,
+        mintrades,
+        best,
+        low_bounds,
+        high_bounds,
+    } = config;
+
     let mut buffer = String::new();
     let mut params = best.to_vec();
     let mut vals = vec![0.0; npoints];

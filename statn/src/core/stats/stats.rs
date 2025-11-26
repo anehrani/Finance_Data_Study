@@ -1048,12 +1048,11 @@ impl OnlineStats {
 
     pub fn update(&mut self, y: &[f64]) {
         if self.n == 0 {
-            for (_i, (&y_val, (mean_val, (sum2_val, (sum3_val, sum4_val))))) in y.iter()
+            for (&y_val, (mean_val, (sum2_val, (sum3_val, sum4_val)))) in y.iter()
                 .zip(self.mean.iter_mut()
                     .zip(self.sum2.iter_mut()
                         .zip(self.sum3.iter_mut()
-                            .zip(self.sum4.iter_mut()))))
-                .enumerate() {
+                            .zip(self.sum4.iter_mut())))) {
                 *mean_val = y_val;
                 *sum2_val = 0.0;
                 *sum3_val = 0.0;

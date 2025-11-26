@@ -6,45 +6,56 @@ use crate::estimators::stochastic_bias::StocBias;
 
 /// Differential evolution optimization
 ///
+/// Configuration for differential evolution
+pub struct DiffEvConfig<'a> {
+    pub nvars: usize,
+    pub nints: usize,
+    pub popsize: usize,
+    pub overinit: usize,
+    pub mintrades: i32,
+    pub max_evals: usize,
+    pub max_bad_gen: usize,
+    pub mutate_dev: f64,
+    pub pcross: f64,
+    pub pclimb: f64,
+    pub low_bounds: &'a [f64],
+    pub high_bounds: &'a [f64],
+    pub print_progress: bool,
+}
+
+/// Differential evolution optimization
+///
 /// # Arguments
 /// * `criter` - Criterion function to be maximized. Takes parameters and mintrades.
-/// * `nvars` - Number of variables
-/// * `nints` - Number of first variables that are integers
-/// * `popsize` - Population size (should be 5-10 times nvars)
-/// * `overinit` - Overinitialization for initial population
-/// * `mintrades` - Minimum number of trades for candidate system
-/// * `max_evals` - Max number of failed initial performance evaluations
-/// * `max_bad_gen` - Max number of contiguous generations with no improvement of best
-/// * `mutate_dev` - Deviation for differential mutation (0.4 to 1.2)
-/// * `pcross` - Probability of crossover (0.0 to 1.0)
-/// * `pclimb` - Probability of taking a hill-climbing step
-/// * `low_bounds` - Lower bounds for parameters
-/// * `high_bounds` - Upper bounds for parameters
-/// * `print_progress` - Print progress to screen?
+/// * `config` - Configuration struct containing all parameters
 /// * `stoc_bias` - Optional stochastic bias estimator
 ///
 /// # Returns
 /// A Result containing the best parameters found (with criterion value at end) or an error message.
 pub fn diff_ev<F>(
     criter: F,
-    nvars: usize,
-    nints: usize,
-    popsize: usize,
-    overinit: usize,
-    mut mintrades: i32,
-    max_evals: usize,
-    max_bad_gen: usize,
-    mutate_dev: f64,
-    pcross: f64,
-    pclimb: f64,
-    low_bounds: &[f64],
-    high_bounds: &[f64],
-    print_progress: bool,
+    config: DiffEvConfig,
     stoc_bias: &mut Option<StocBias>,
 ) -> Result<Vec<f64>, String>
 where
     F: Fn(&[f64], i32) -> f64 + Copy,
 {
+    let DiffEvConfig {
+        nvars,
+        nints,
+        popsize,
+        overinit,
+        mut mintrades,
+        max_evals,
+        max_bad_gen,
+        mutate_dev,
+        pcross,
+        pclimb,
+        low_bounds,
+        high_bounds,
+        print_progress,
+    } = config;
+
     let dim = nvars + 1; // Each case is nvars variables plus criterion
     let mut pop1 = vec![0.0; dim * popsize];
     let mut pop2 = vec![0.0; dim * popsize];
@@ -681,21 +692,25 @@ mod tests {
         let low_bounds = vec![-5.0; nvars];
         let high_bounds = vec![5.0; nvars];
         
+        let config = DiffEvConfig {
+            nvars,
+            nints: 0,
+            popsize: 50,
+            overinit: 0,
+            mintrades: 10,
+            max_evals: 10000,
+            max_bad_gen: 100,
+            mutate_dev: 0.5,
+            pcross: 0.5,
+            pclimb: 0.0,
+            low_bounds: &low_bounds,
+            high_bounds: &high_bounds,
+            print_progress: false,
+        };
+        
         let result = diff_ev(
             criter,
-            nvars,
-            0, // nints
-            50, // popsize
-            0, // overinit
-            10, // mintrades
-            10000, // max_evals
-            100, // max_bad_gen
-            0.5, // mutate_dev
-            0.5, // pcross
-            0.0, // pclimb
-            &low_bounds,
-            &high_bounds,
-            false, // print_progress
+            config,
             &mut None, // stoc_bias
         );
         

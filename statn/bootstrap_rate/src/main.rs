@@ -29,7 +29,7 @@ fn main() {
         )
     };
 
-    if nsamps == 0 || nboot == 0 || ntries == 0 || prob < 0.0 || prob >= 1.0 {
+    if nsamps == 0 || nboot == 0 || ntries == 0 || !(0.0..1.0).contains(&prob) {
         println!("\nUsage: bootstrap_rate  nsamples  nboot  ntries  prob");
         std::process::exit(1);
     }

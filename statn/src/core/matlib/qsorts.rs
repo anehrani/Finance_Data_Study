@@ -71,7 +71,7 @@ pub fn qsortd(first: usize, last: usize, data: &mut [f64]) {
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -118,7 +118,7 @@ pub fn qsortds(first: usize, last: usize, data: &mut [f64], slave: &mut [f64]) {
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -172,7 +172,7 @@ pub fn qsortds2(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -228,7 +228,7 @@ pub fn qsortds3(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -286,7 +286,7 @@ pub fn qsortds4(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -304,6 +304,7 @@ pub fn qsortds4(
    QSORT with five slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds5(
     first: usize,
     last: usize,
@@ -346,7 +347,7 @@ pub fn qsortds5(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -364,6 +365,7 @@ pub fn qsortds5(
    QSORT with six slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds6(
     first: usize,
     last: usize,
@@ -408,7 +410,7 @@ pub fn qsortds6(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -426,6 +428,7 @@ pub fn qsortds6(
    QSORT with seven slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds7(
     first: usize,
     last: usize,
@@ -472,7 +475,7 @@ pub fn qsortds7(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -490,6 +493,7 @@ pub fn qsortds7(
    QSORT with eight slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds8(
     first: usize,
     last: usize,
@@ -538,7 +542,7 @@ pub fn qsortds8(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -556,6 +560,7 @@ pub fn qsortds8(
    QSORT with nine slave arrays
 --------------------------------------------------------------------------------
 */
+#[allow(clippy::too_many_arguments)]
 pub fn qsortds9(
     first: usize,
     last: usize,
@@ -606,7 +611,7 @@ pub fn qsortds9(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -659,7 +664,7 @@ pub fn qsortdsi(first: usize, last: usize, data: &mut [f64], slave: &mut [i32]) 
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -706,7 +711,7 @@ pub fn qsortds64(first: usize, last: usize, data: &mut [f64], slave: &mut [u64])
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -760,7 +765,7 @@ pub fn qsortdsri(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -814,7 +819,7 @@ pub fn qsortdsii(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -860,7 +865,7 @@ pub fn qsorti(first: usize, last: usize, data: &mut [i32]) {
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -907,7 +912,7 @@ pub fn qsortisi(first: usize, last: usize, data: &mut [i32], slave: &mut [i32]) 
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -954,7 +959,7 @@ pub fn qsortisd(first: usize, last: usize, data: &mut [i32], slave: &mut [f64]) 
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -1008,7 +1013,7 @@ pub fn qsortissii(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -1062,7 +1067,7 @@ pub fn qsort64ssii(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
@@ -1120,7 +1125,7 @@ pub fn qsortid4(
             upper = upper.saturating_sub(1);
         }
 
-        if (lower > upper) {
+        if lower > upper {
             break;
         }
     }
