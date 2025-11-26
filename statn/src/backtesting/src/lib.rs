@@ -291,15 +291,15 @@ pub fn run_backtest_discrete(
                 position = 1;
                 num_trades += 2;
             }
-            // Currently long, got HOLD -> update unrealized P&L
-            (1, 0) => {
+            // Currently long, got HOLD or BUY -> update unrealized P&L
+            (1, 0) | (1, 1) => {
                 // Mark-to-market (unrealized)
                 let unrealized_pnl = budget * (price / entry_price - 1.0);
                 let current_value = budget + unrealized_pnl;
                 budget_history[i] = current_value;
             }
-            // Currently short, got HOLD -> update unrealized P&L
-            (-1, 0) => {
+            // Currently short, got HOLD or SELL -> update unrealized P&L
+            (-1, 0) | (-1, -1) => {
                 // Mark-to-market (unrealized)
                 let unrealized_pnl = budget * (entry_price / price - 1.0);
                 let current_value = budget + unrealized_pnl;
@@ -334,6 +334,11 @@ pub fn run_backtest_discrete(
         budget += pnl - cost;
         total_costs += cost;
         
+        // Update the last point in history to reflect the realized value (minus exit cost)
+        if let Some(last) = budget_history.last_mut() {
+            *last = budget;
+        }
+        
         if pnl > 0.0 {
             num_wins += 1;
         } else {
@@ -366,22 +371,6 @@ pub fn run_backtest_discrete(
         0.0
     };
     
-    // Calculate Sharpe ratio (annualized, assuming daily data)
-    let sharpe_ratio = if !returns.is_empty() {
-        let mean_return = returns.iter().sum::<f64>() / returns.len() as f64;
-        let variance = returns.iter()
-            .map(|r| (r - mean_return).powi(2))
-            .sum::<f64>() / returns.len() as f64;
-        let std_dev = variance.sqrt();
-        if std_dev > 0.0 {
-            (mean_return / std_dev) * (252.0_f64).sqrt() // Annualized
-        } else {
-            0.0
-        }
-    } else {
-        0.0
-    };
-    
     // Calculate daily returns from budget history
     let mut daily_returns = Vec::with_capacity(n - 1);
     for i in 0..n - 1 {
@@ -392,6 +381,22 @@ pub fn run_backtest_discrete(
         };
         daily_returns.push(ret);
     }
+
+    // Calculate Sharpe ratio (annualized, assuming daily data) using daily returns
+    let sharpe_ratio = if !daily_returns.is_empty() {
+        let mean_return = daily_returns.iter().sum::<f64>() / daily_returns.len() as f64;
+        let variance = daily_returns.iter()
+            .map(|r| (r - mean_return).powi(2))
+            .sum::<f64>() / daily_returns.len() as f64;
+        let std_dev = variance.sqrt();
+        if std_dev > 1e-9 {
+            (mean_return / std_dev) * (252.0_f64).sqrt() // Annualized
+        } else {
+            0.0
+        }
+    } else {
+        0.0
+    };
     
     // Build metrics
     let mut metrics = FxHashMap::default();
