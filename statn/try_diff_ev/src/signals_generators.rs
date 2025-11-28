@@ -1,19 +1,9 @@
 //! Signal generation module for moving average crossover strategy.
 //! Contains multiple signal generator implementations.
 
-/// Result of the signal generation.
-#[derive(Debug, Clone)]
-pub struct SignalResult {
-    /// The raw price series.
-    pub prices: Vec<f64>,
-    /// Signal per price point: 1 = BUY, -1 = SELL, 0 = HOLD.
-    pub signals: Vec<i32>,
-    /// Parameters used for the generation (for reference).
-    pub long_lookback: usize,
-    pub short_pct: f64,
-    pub short_thresh: f64,
-    pub long_thresh: f64,
-}
+pub use backtesting::SignalResult;
+
+// SignalResult is now imported from backtesting crate.
 
 /// Dispatch function to select signal generator by name.
 ///

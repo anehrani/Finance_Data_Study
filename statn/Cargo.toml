@@ -6,6 +6,7 @@ members = [
     "src/indicators",
     "try_estimators",
     "try_cd_ma",
+    "try_cd_comb",
     "try_diff_ev",
     "check_sensitivity",
     "gap_analysis",
@@ -15,6 +16,7 @@ members = [
     "chooser",
     "per_what", "bound_mean", "bootstrap_rate", "conftest", "bnd_ret", "drawdown",
     "montecarlo_permutation_test",
+    "src/backtesting",
 ]
 
 [package]

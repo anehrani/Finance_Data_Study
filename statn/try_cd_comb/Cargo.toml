@@ -1,23 +1,27 @@
 [package]
-name = "try_diff_ev"
+name = "try_cd_comb"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "try_diff_ev"
-path = "main.rs"
+[lib]
+name = "try_cd_comb"
+path = "src/lib.rs"
 
-[dev-dependencies]
-tempfile = "3.10"
+[[bin]]
+name = "try_cd_comb"
+path = "main.rs"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8"
 clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
+thiserror = "1.0"
 matlib = { path = "../src/core/matlib" }
 stats = { path = "../src/core/stats" }
 finance_tools = { path = "../src/finance_tools" }
 indicators = { path = "../src/indicators" }
 statn = { path = "../" }
-backtesting = { path = "../src/backtesting" }
-plotters = "0.3.6"
+
+[dev-dependencies]
+tempfile = "3.8"

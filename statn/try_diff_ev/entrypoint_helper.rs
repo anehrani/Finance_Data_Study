@@ -35,7 +35,7 @@ pub enum Commands {
         max_gens: usize,
         
         /// Minimum trades required
-        #[arg(short = 'm', long, default_value_t = 20)]
+        #[arg(short = 'm', long, default_value_t = 1)]
         min_trades: i32,
         
         /// Training data percentage (0.0 - 1.0)
@@ -43,15 +43,19 @@ pub enum Commands {
         train_pct: f64,
         
         /// Output file for optimized parameters
-        #[arg(short, long, default_value = "params.txt")]
-        output: PathBuf,
+        #[arg(short, long, default_value = "sensitivity_log.log")]
+        sensitivity_log: PathBuf,
+
+        /// Output file for optimized parameters
+        #[arg(short = 'P', long, default_value = "params.txt")]
+        params_file: PathBuf,
         
         /// Signal generator type ("original" or "log_diff")
         #[arg(long, default_value = "original")]
         generator: String,
         
         /// Output directory
-        #[arg(short = 'D', long, default_value = "../results/")]
+        #[arg(short = 'D', long, default_value = "results/")]
         output_dir: PathBuf,
         
         /// Enable verbose output
@@ -82,11 +86,11 @@ pub enum Commands {
         train_pct: f64,
         
         /// Output directory
-        #[arg(short = 'D', long, default_value = "../results/")]
+        #[arg(short = 'D', long, default_value = "results/")]
         output_dir: PathBuf,
         
         /// Signal generator type ("original" or "log_diff")
-        #[arg(long, default_value = "original")]
+        #[arg(long, default_value = "log_diff")]
         generator: String,
         
         #[arg(short, long)]

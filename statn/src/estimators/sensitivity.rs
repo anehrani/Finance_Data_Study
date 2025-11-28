@@ -29,6 +29,7 @@ pub fn sensitivity<F>(
     best: &[f64],
     low_bounds: &[f64],
     high_bounds: &[f64],
+    output_file: &std::path::Path,
 ) -> io::Result<()>
 where
     F: FnMut(&[f64], i32) -> f64,
@@ -115,5 +116,5 @@ where
         }
     }
 
-    crate::core::io::write::write_file("SENS.LOG", buffer)
+    crate::core::io::write::write_file(output_file, buffer)
 }

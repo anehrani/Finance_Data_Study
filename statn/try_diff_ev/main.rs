@@ -35,7 +35,8 @@ fn main() {
             max_gens,
             min_trades,
             train_pct,
-            output,
+            params_file,
+            sensitivity_log,
             generator,
             output_dir,
             verbose,
@@ -43,7 +44,7 @@ fn main() {
             println!("\n=== OPTIMIZATION MODE ===");
             println!("Data file: {}", data_file.display());
             println!("Max lookback: {}", max_lookback);
-            println!("Output: {}\n", output_dir.join(&output).display());
+            println!("Output: {}\n", output_dir.join(&params_file).display());
             
             // Load market data
             let market_data = match load_market_data(&data_file, max_lookback) {
@@ -125,7 +126,7 @@ fn main() {
                     }
                     
                     // Save parameters
-                    let output_path = output_dir.join(&output);
+                    let output_path = output_dir.join(&params_file);
                     if let Err(e) = save_parameters(&output_path, &params[0..4]) {
                         eprintln!("Error saving parameters: {}", e);
                     } else {
@@ -141,6 +142,7 @@ fn main() {
                         },
                         4, 1, 30, 80, min_trades, &params,
                         &low_bounds, &high_bounds,
+                        &output_dir.join(&sensitivity_log),
                     );
                     println!("✓ Sensitivity saved to SENS.LOG");
                 }
@@ -167,7 +169,7 @@ fn main() {
             println!("Budget: ${:.2}\n", budget);
             
             // Load parameters
-            let params = match load_parameters(&params_file) {
+            let params = match load_parameters(&output_dir.join(params_file)) {
                 Ok(p) => p,
                 Err(e) => {
                     eprintln!("Error loading parameters: {}", e);
