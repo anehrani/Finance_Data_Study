@@ -1,0 +1,40 @@
+# CD_MA Configuration File
+
+# --- Data Settings ---
+# Path to your market data file (relative to where you run the command)
+data_file = "../../data/XAGUSD.txt"
+
+# Output file for logs and results
+output_file = "results/CD_MA_config_run.log"
+
+# --- Training Settings ---
+# Number of test cases to withhold for out-of-sample evaluation
+n_test = 252  # Approx 1 year of daily data
+
+# Elastic Net Regularization
+alpha = 0.05          # Mix between L1 (Lasso) and L2 (Ridge). 0.5 is a good balance.
+n_folds = 10         # Number of cross-validation folds
+n_lambdas = 100      # Number of lambda values to test
+max_iterations = 10000
+tolerance = 1e-7
+
+# --- Indicator Settings ---
+
+# 1. Moving Average Crossovers
+# Generates a grid of (n_long * n_short) indicators
+lookback_inc = 10    # Increment step for lookback periods
+n_long = 7          # Number of long-term lookbacks (10, 20, ..., 200)
+n_short = 3         # Number of short-term lookbacks (10, 20, ..., 100)
+
+# 2. RSI (Relative Strength Index)
+# List of periods to include. Leave empty [] to disable.
+rsi_periods = [14, 21, 28]
+
+# 3. MACD (Moving Average Convergence Divergence)
+# List of configurations: [fast_period, slow_period, signal_period]
+# The elastic net will select the best one(s).
+macd_configs = [
+    [12, 26, 9],   # Standard MACD (Most common)
+    [5, 35, 5],    # Fast MACD (More sensitive to recent moves)
+    [19, 39, 9],   # Slow MACD (Smoother, less noise)
+]

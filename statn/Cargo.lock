@@ -1160,6 +1160,7 @@ name = "try_cd_comb"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "backtesting",
  "clap",
  "finance_tools",
  "indicators",

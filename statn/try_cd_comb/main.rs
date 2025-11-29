@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     println!("Test cases: {}", split.test_data.len() - split.max_lookback);
     
     // Generate indicator specifications
-    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short, &config.rsi_periods);
+    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short, &config.rsi_periods, &config.macd_configs);
     println!("Number of indicators: {}", specs.len());
     
     // Compute training indicators
@@ -81,6 +81,25 @@ fn main() -> Result<()> {
         &evaluation_result,
         &specs,
     )?;
+    
+    // Run backtest
+    println!("Running backtest...");
+    // Extract test prices (log prices) corresponding to the test period
+    let test_prices_slice = &split.test_data[split.max_lookback..split.max_lookback + config.n_test];
+    
+    let backtest_stats = run_backtest(
+        &training_result.model,
+        test_prices_slice,
+        &test_data.data,
+        config.n_test,
+        config.n_vars(),
+        10000.0, // Initial budget
+        0.1,     // Transaction cost %
+    )?;
+    
+    // Write backtest results
+    let backtest_path = config.output_file.parent().unwrap_or(std::path::Path::new(".")).join("backtest_results.txt");
+    write_backtest_results(&backtest_path, &backtest_stats)?;
     
     // Print summary
     println!("\nSummary:");

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use indicators::trend::ma::compute_indicators as compute_ma_indicator;
 use indicators::oscillators::rsi::rsi;
+use indicators::oscillators::macd::{macd_histogram, MacdConfig};
 use statn::core::io::compute_targets;
 
 /// Specification for an indicator
@@ -12,6 +13,11 @@ pub enum IndicatorSpec {
     },
     Rsi {
         period: usize,
+    },
+    Macd {
+        fast: usize,
+        slow: usize,
+        signal: usize,
     },
 }
 
@@ -34,6 +40,7 @@ pub fn generate_specs(
     n_long: usize,
     n_short: usize,
     rsi_periods: &[usize],
+    macd_configs: &[(usize, usize, usize)],
 ) -> Vec<IndicatorSpec> {
     let mut specs = Vec::new();
 
@@ -53,6 +60,11 @@ pub fn generate_specs(
     // RSI
     for &period in rsi_periods {
         specs.push(IndicatorSpec::Rsi { period });
+    }
+
+    // MACD
+    for &(fast, slow, signal) in macd_configs {
+        specs.push(IndicatorSpec::Macd { fast, slow, signal });
     }
 
     specs
@@ -81,12 +93,25 @@ pub fn compute_all_indicators(
             },
             IndicatorSpec::Rsi { period } => {
                 let full_rsi = rsi(prices, *period);
-                // Extract the relevant slice. Note: rsi returns full vector aligned with prices.
-                // We need [start_idx .. start_idx + n_cases]
+                // Extract the relevant slice
                 if start_idx + n_cases > full_rsi.len() {
                     return Err(anyhow::anyhow!("RSI computation out of bounds"));
                 }
                 full_rsi[start_idx..start_idx + n_cases].to_vec()
+            },
+            IndicatorSpec::Macd { fast, slow, signal } => {
+                // Compute MACD histogram for entire price series
+                let config = MacdConfig {
+                    fast_period: *fast,
+                    slow_period: *slow,
+                    signal_period: *signal,
+                };
+                let full_macd = macd_histogram(prices, config);
+                // Extract the relevant slice
+                if start_idx + n_cases > full_macd.len() {
+                    return Err(anyhow::anyhow!("MACD computation out of bounds"));
+                }
+                full_macd[start_idx..start_idx + n_cases].to_vec()
             }
         };
         
@@ -123,8 +148,10 @@ mod tests {
     
     #[test]
     fn test_generate_specs() {
-        let specs = generate_specs(10, 3, 2, &[14]);
-        assert_eq!(specs.len(), 7); // 3 * 2 + 1
+        // Test with RSI and multiple MACD configs
+        let macd_configs = vec![(12, 26, 9), (5, 35, 5)];
+        let specs = generate_specs(10, 3, 2, &[14], &macd_configs);
+        assert_eq!(specs.len(), 9); // 3 * 2 + 1 RSI + 2 MACD
         
         // Check first spec (MA)
         if let IndicatorSpec::MaCrossover { long_lookback, .. } = specs[0] {
@@ -133,12 +160,34 @@ mod tests {
             panic!("Expected MA crossover");
         }
         
-        // Check last spec (RSI)
+        // Check RSI spec
         if let IndicatorSpec::Rsi { period } = specs[6] {
             assert_eq!(period, 14);
         } else {
             panic!("Expected RSI");
         }
+        
+        // Check first MACD spec
+        if let IndicatorSpec::Macd { fast, slow, signal } = specs[7] {
+            assert_eq!(fast, 12);
+            assert_eq!(slow, 26);
+            assert_eq!(signal, 9);
+        } else {
+            panic!("Expected MACD");
+        }
+        
+        // Check second MACD spec
+        if let IndicatorSpec::Macd { fast, slow, signal } = specs[8] {
+            assert_eq!(fast, 5);
+            assert_eq!(slow, 35);
+            assert_eq!(signal, 5);
+        } else {
+            panic!("Expected MACD");
+        }
+        
+        // Test without MACD
+        let specs_no_macd = generate_specs(10, 3, 2, &[14], &[]);
+        assert_eq!(specs_no_macd.len(), 7); // 3 * 2 + 1 RSI, no MACD
     }
     
     #[test]

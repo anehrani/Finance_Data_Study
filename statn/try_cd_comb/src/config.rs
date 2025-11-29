@@ -18,6 +18,12 @@ pub struct Config {
     /// RSI periods to include (optional)
     #[serde(default)]
     pub rsi_periods: Vec<usize>,
+
+    /// MACD configurations to include (optional)
+    /// Each tuple is (fast_period, slow_period, signal_period)
+    /// Example: [(12, 26, 9), (5, 35, 5)]
+    #[serde(default)]
+    pub macd_configs: Vec<(usize, usize, usize)>,
     
     /// Alpha parameter for elastic net (0-1]
     pub alpha: f64,
@@ -98,6 +104,10 @@ pub struct Args {
     /// RSI periods (comma-separated)
     #[arg(long, value_delimiter = ',')]
     pub rsi_periods: Option<Vec<usize>>,
+
+    /// Include default MACD (12,26,9)
+    #[arg(long)]
+    pub include_macd: bool,
     
     /// Alpha parameter (0-1]
     #[arg(value_name = "ALPHA")]
@@ -131,6 +141,11 @@ impl Config {
             n_short: args.n_short
                 .ok_or_else(|| anyhow::anyhow!("n_short is required"))?,
             rsi_periods: args.rsi_periods.clone().unwrap_or_default(),
+            macd_configs: if args.include_macd {
+                vec![(12, 26, 9)]  // Default MACD
+            } else {
+                vec![]
+            },
             alpha: args.alpha
                 .ok_or_else(|| anyhow::anyhow!("alpha is required"))?,
             data_file: args.filename.clone()
@@ -189,14 +204,22 @@ impl Config {
     
     /// Get total number of indicator variables
     pub fn n_vars(&self) -> usize {
-        (self.n_long * self.n_short) + self.rsi_periods.len()
+        let ma_count = self.n_long * self.n_short;
+        let rsi_count = self.rsi_periods.len();
+        let macd_count = self.macd_configs.len();
+        ma_count + rsi_count + macd_count
     }
     
     /// Get maximum lookback period
     pub fn max_lookback(&self) -> usize {
         let ma_max = self.n_long * self.lookback_inc;
         let rsi_max = self.rsi_periods.iter().cloned().max().unwrap_or(0);
-        ma_max.max(rsi_max)
+        // MACD needs slow_period + signal_period
+        let macd_max = self.macd_configs.iter()
+            .map(|(_, slow, signal)| slow + signal)
+            .max()
+            .unwrap_or(0);
+        ma_max.max(rsi_max).max(macd_max)
     }
 }
 
@@ -211,6 +234,7 @@ mod tests {
             n_long: 20,
             n_short: 10,
             rsi_periods: vec![],
+            macd_configs: vec![],
             alpha: 0.5,
             data_file: PathBuf::from("test.txt"),
             output_file: PathBuf::from("output.log"),
@@ -237,6 +261,7 @@ mod tests {
             n_long: 20,
             n_short: 10,
             rsi_periods: vec![],
+            macd_configs: vec![],
             alpha: 0.5,
             data_file: PathBuf::from("test.txt"),
             output_file: PathBuf::from("output.log"),

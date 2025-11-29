@@ -22,6 +22,7 @@ stats = { path = "../src/core/stats" }
 finance_tools = { path = "../src/finance_tools" }
 indicators = { path = "../src/indicators" }
 statn = { path = "../" }
+backtesting = { path = "../src/backtesting" }
 
 [dev-dependencies]
 tempfile = "3.8"

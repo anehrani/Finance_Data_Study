@@ -7,6 +7,7 @@ use crate::config::Config;
 use crate::indicators::IndicatorSpec;
 use crate::training::TrainingResult;
 use statn::models::cd_ma::CoordinateDescent;
+use backtesting::models::TradeStats;
 
 /// Evaluation results
 #[derive(Debug)]
@@ -156,6 +157,22 @@ pub fn write_results<P: AsRef<Path>>(
         }
         writeln!(file)?;
     }
+
+    // MACD Coefficients
+    if !config.macd_configs.is_empty() {
+        writeln!(file, "MACD Coefficients (Histogram):")?;
+        for &(fast, slow, signal) in &config.macd_configs {
+            if k < training.model.beta.len() {
+                if training.model.beta[k] != 0.0 {
+                    writeln!(file, "  MACD({},{},{}): {:9.4}", fast, slow, signal, training.model.beta[k])?;
+                } else {
+                    writeln!(file, "  MACD({},{},{}):     ----", fast, slow, signal)?;
+                }
+                k += 1;
+            }
+        }
+        writeln!(file)?;
+    }
     
     // Out-of-sample results
     writeln!(file, "Out-of-Sample Results:")?;
@@ -166,6 +183,65 @@ pub fn write_results<P: AsRef<Path>>(
     )?;
     
     println!("\nResults written to {}", path.as_ref().display());
+    Ok(())
+}
+
+/// Write backtest results to a separate file
+pub fn write_backtest_results<P: AsRef<Path>>(
+    path: P,
+    stats: &TradeStats,
+) -> Result<()> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path.as_ref())?;
+
+    writeln!(file, "Backtest Results")?;
+    writeln!(file, "================")?;
+    writeln!(file)?;
+
+    writeln!(file, "Performance Summary")?;
+    writeln!(file, "-------------------")?;
+    writeln!(file, "Initial Budget:   ${:.2}", stats.initial_budget)?;
+    writeln!(file, "Final Budget:     ${:.2}", stats.final_budget)?;
+    writeln!(file, "Total P&L:        ${:.2}", stats.total_pnl)?;
+    writeln!(file, "Return (ROI):     {:.2}%", stats.roi_percent)?;
+    writeln!(file, "Total Costs:      ${:.2}", stats.total_costs)?;
+    writeln!(file, "Max Drawdown:     {:.2}%", stats.max_drawdown)?;
+    writeln!(file, "Sharpe Ratio:     {:.4}", stats.sharpe_ratio)?;
+    writeln!(file)?;
+
+    writeln!(file, "Trade Statistics")?;
+    writeln!(file, "----------------")?;
+    writeln!(file, "Total Trades:     {}", stats.num_trades)?;
+    writeln!(file, "Winning Trades:   {}", stats.num_wins)?;
+    writeln!(file, "Losing Trades:    {}", stats.num_losses)?;
+    writeln!(file, "Win Rate:         {:.2}%", stats.win_rate)?;
+    writeln!(file)?;
+
+    writeln!(file, "Trade Log")?;
+    writeln!(file, "---------")?;
+    writeln!(
+        file,
+        "{:<6} {:<10} {:<10} {:<10} {:<10} {:<12} {:<10}",
+        "Type", "Entry Idx", "Entry Price", "Exit Idx", "Exit Price", "P&L", "Return %"
+    )?;
+
+    for trade in &stats.trades {
+        writeln!(
+            file,
+            "{:<6} {:<10} {:<10.4} {:<10} {:<10.4} {:<12.4} {:<10.2}",
+            trade.trade_type,
+            trade.entry_index,
+            trade.entry_price,
+            trade.exit_index,
+            trade.exit_price,
+            trade.pnl,
+            trade.return_pct
+        )?;
+    }
+
     Ok(())
 }
 

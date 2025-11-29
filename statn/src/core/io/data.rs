@@ -20,6 +20,10 @@ pub fn split_train_test(
     max_lookback: usize,
     n_test: usize,
 ) -> Result<DataSplit, String> {
+    // We need:
+    // - max_lookback prices for initial lookback
+    // - n_test prices for test cases
+    // - 1 extra price to compute the last target return (price[n_test] - price[n_test-1])
     let total_needed = max_lookback + n_test + 1;
     
     if data.len() < total_needed {
@@ -29,15 +33,21 @@ pub fn split_train_test(
         ));
     }
     
-    let n_train = data.len() - n_test - max_lookback;
+    // Calculate how many training cases we can have
+    // Total data = max_lookback + n_train + 1 (for last train target) + n_test + 1 (for last test target)
+    // But we share the lookback between train and test, so:
+    // data.len() = max_lookback + n_train + 1 + n_test + 1
+    // n_train = data.len() - max_lookback - n_test - 2
+    let n_train = data.len() - max_lookback - n_test - 1;
     
-    // Training data: from start to (start + max_lookback + n_train)
-    let train_end = max_lookback + n_train;
+    // Training data: from start to (max_lookback + n_train + 1)
+    // The +1 is for computing the last training target
+    let train_end = max_lookback + n_train + 1;
     let train_data = data[..train_end].to_vec();
     
-    // Test data: from (train_end - max_lookback) to end
-    // This ensures we have enough lookback for test indicators
-    let test_start = train_end - max_lookback;
+    // Test data: from (train_end - max_lookback - 1) to end
+    // We need max_lookback for indicators, plus n_test + 1 for targets
+    let test_start = train_end - max_lookback - 1;
     let test_data = data[test_start..].to_vec();
     
     Ok(DataSplit {
@@ -102,13 +112,12 @@ mod tests {
         
         assert_eq!(split.max_lookback, 200);
         assert!(split.train_data.len() > 0);
-        assert!(split.test_data.len() >= 252 + 200);
+        // Test data needs max_lookback + n_test + 1 for computing last target
+        assert_eq!(split.test_data.len(), 200 + 252 + 1);
         
-        // Verify overlap for lookback
-        let n_train = prices.len() - 252 - 200;
-        let train_end = 200 + n_train;
-        let test_start = train_end - 200;
-        assert_eq!(split.test_data[0], prices[test_start]);
+        // Verify we can compute all targets
+        let n_train = prices.len() - 200 - 252 - 1;
+        assert_eq!(split.train_data.len(), 200 + n_train + 1);
     }
     
     #[test]

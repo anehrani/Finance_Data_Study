@@ -3,6 +3,7 @@
 This package extends the `try_cd_ma` (Moving Average Crossover) system by supporting a **combination of multiple indicator types**, including:
 - **Moving Average (MA) Crossovers** - Trend-following indicators
 - **Relative Strength Index (RSI)** - Momentum oscillator
+- **MACD (Moving Average Convergence Divergence)** - Trend and momentum indicator
 
 The system uses **Elastic Net regularization** via coordinate descent to select the most predictive indicators for trading.
 
@@ -104,6 +105,12 @@ Arguments:
 - Measures momentum on a 0-100 scale
 - Values > 70 suggest overbought, < 30 suggest oversold
 
+**MACD**: Uses standard parameters (12, 26, 9):
+- Fast EMA (12) - Slow EMA (26) = MACD line
+- Signal line = EMA(9) of MACD line
+- Histogram = MACD line - Signal line (used as the indicator)
+- Positive histogram suggests bullish momentum, negative suggests bearish
+
 ### 2. Model Training
 
 Uses **Elastic Net** regularization:
@@ -174,9 +181,14 @@ RSI Coefficients:
   Period  21:      ----
   Period  28:   -0.0234
 
+MACD Coefficient (Histogram):
+  MACD:    0.0123
+
 Out-of-Sample Results:
   Total return: 0.12345 (13.145%)
 ```
+
+A detailed backtest report is also generated in `backtest_results.txt` (or similar), containing performance metrics and a full trade log.
 
 ## Data Format
 
@@ -194,10 +206,10 @@ YYYYMMDD Price
 # Using config file
 cargo run -p try_cd_comb -- --config config.toml
 
-# Using command-line arguments with RSI
-cargo run -p try_cd_comb -- 10 20 10 0.5 data/XAGUSD.txt --rsi-periods 14,21
+# Using command-line arguments with RSI and MACD
+cargo run -p try_cd_comb -- 10 20 10 0.5 data/XAGUSD.txt --rsi-periods 14,21 --include-macd
 
-# MA only (no RSI)
+# MA only (no RSI, no MACD)
 cargo run -p try_cd_comb -- 10 20 10 0.5 data/XAGUSD.txt
 ```
 
@@ -222,11 +234,11 @@ The package is organized into modules:
 ## Future Enhancements
 
 Potential additions:
-- **MACD** (Moving Average Convergence Divergence)
 - **Bollinger Bands** (volatility indicator)
 - **Stochastic Oscillator** (momentum indicator)
 - **ATR** (Average True Range - volatility)
 - **Volume-based indicators**
+- **Custom MACD parameters** (currently uses standard 12, 26, 9)
 
 ## References
 

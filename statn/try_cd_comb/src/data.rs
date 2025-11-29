@@ -38,7 +38,8 @@ mod tests {
         
         assert_eq!(split.max_lookback, 200);
         assert!(split.train_data.len() > 0);
-        assert!(split.test_data.len() >= 252 + 200);
+        // Test data needs max_lookback + n_test + 1 for computing last target
+        assert_eq!(split.test_data.len(), 200 + 252 + 1);
     }
     
     #[test]
