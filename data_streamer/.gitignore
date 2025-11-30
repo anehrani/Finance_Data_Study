@@ -1,0 +1,21 @@
+# Rust
+/target/
+Cargo.lock
+
+# Data directories
+/historical_data/
+/tick_data/
+/bar_data/
+/data/
+MARKETS.TXT
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
