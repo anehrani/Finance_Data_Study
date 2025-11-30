@@ -1,10 +1,11 @@
 use data_streamer::bybit::BybitClient;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
 use clap::Parser;
 use reqwest::Error;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
+use std::collections::HashSet;
 
 #[derive(Parser, Debug)]
 #[command(name = "download_historical")]
@@ -14,7 +15,7 @@ struct Args {
     #[arg(short, long, default_value = "D")]
     interval: String,
 
-    /// Number of data points to download (max 1000)
+    /// Total number of data points to download (will make multiple API calls if > 1000)
     #[arg(short, long, default_value = "1000")]
     limit: usize,
 
@@ -42,7 +43,7 @@ fn interval_to_string(interval: &str) -> &str {
         "D" | "1d" | "daily" => "D",
         "W" | "1w" | "weekly" => "W",
         "M" | "1M" | "monthly" => "M",
-        _ => "D", // Default to daily
+        _ => "D",
     }
 }
 
@@ -65,6 +66,25 @@ fn interval_to_dirname(interval: &str) -> String {
     }
 }
 
+fn interval_to_millis(interval: &str) -> i64 {
+    match interval {
+        "1" => 60_000,           // 1 minute
+        "3" => 180_000,          // 3 minutes
+        "5" => 300_000,          // 5 minutes
+        "15" => 900_000,         // 15 minutes
+        "30" => 1_800_000,       // 30 minutes
+        "60" => 3_600_000,       // 1 hour
+        "120" => 7_200_000,      // 2 hours
+        "240" => 14_400_000,     // 4 hours
+        "360" => 21_600_000,     // 6 hours
+        "720" => 43_200_000,     // 12 hours
+        "D" => 86_400_000,       // 1 day
+        "W" => 604_800_000,      // 1 week
+        "M" => 2_592_000_000,    // ~30 days
+        _ => 86_400_000,
+    }
+}
+
 fn format_timestamp(interval: &str, ts_millis: i64) -> String {
     if let Some(dt) = DateTime::<Utc>::from_timestamp_millis(ts_millis) {
         match interval {
@@ -76,25 +96,30 @@ fn format_timestamp(interval: &str, ts_millis: i64) -> String {
     }
 }
 
-async fn download_kline_data(
-    client: &BybitClient,
+async fn download_kline_batch(
     symbol: &str,
     interval: &str,
     limit: usize,
+    end_time: Option<i64>,
 ) -> Result<Vec<Vec<String>>, Box<dyn std::error::Error>> {
-    // Use the existing get_daily_kline but we'll need to modify it
-    // For now, let's call it directly with the interval parameter
-    // Note: The bybit module needs to be updated to support intervals
+    let url = "https://api.bybit.com/v5/market/kline";
+    let limit_str = limit.to_string();
+    let end_time_str = end_time.map(|et| et.to_string());
     
-    let url = format!("https://api.bybit.com/v5/market/kline");
+    let mut query_params: Vec<(&str, &str)> = vec![
+        ("category", "spot"),
+        ("symbol", symbol),
+        ("interval", interval),
+        ("limit", &limit_str),
+    ];
+    
+    if let Some(ref et_str) = end_time_str {
+        query_params.push(("end", et_str));
+    }
+    
     let response = reqwest::Client::new()
-        .get(&url)
-        .query(&[
-            ("category", "spot"),
-            ("symbol", symbol),
-            ("interval", interval),
-            ("limit", &limit.to_string()),
-        ])
+        .get(url)
+        .query(&query_params)
         .send()
         .await?;
 
@@ -124,30 +149,100 @@ async fn download_kline_data(
     }
 }
 
+async fn download_kline_data_paginated(
+    symbol: &str,
+    interval: &str,
+    total_limit: usize,
+) -> Result<Vec<Vec<String>>, Box<dyn std::error::Error>> {
+    let mut all_klines = Vec::new();
+    let mut seen_timestamps = HashSet::new();
+    let batch_size = 1000; // Bybit max per request
+    let mut end_time: Option<i64> = None;
+    let interval_millis = interval_to_millis(interval);
+    
+    let num_batches = (total_limit + batch_size - 1) / batch_size;
+    
+    for batch_num in 0..num_batches {
+        let remaining = total_limit - all_klines.len();
+        if remaining == 0 {
+            break;
+        }
+        
+        let current_limit = remaining.min(batch_size);
+        
+        if batch_num > 0 {
+            print!(".");
+            std::io::stdout().flush().ok();
+        }
+        
+        match download_kline_batch(symbol, interval, current_limit, end_time).await {
+            Ok(klines) => {
+                if klines.is_empty() {
+                    break; // No more data available
+                }
+                
+                // Filter out duplicates and add to collection
+                for kline in klines {
+                    if kline.len() > 0 {
+                        if let Ok(ts) = kline[0].parse::<i64>() {
+                            if seen_timestamps.insert(ts) {
+                                all_klines.push(kline);
+                            }
+                        }
+                    }
+                }
+                
+                // Get the oldest timestamp for next batch
+                if let Some(oldest) = all_klines.last() {
+                    if let Ok(ts) = oldest[0].parse::<i64>() {
+                        end_time = Some(ts - interval_millis);
+                    }
+                }
+                
+                // Small delay to avoid rate limiting
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+    }
+    
+    if num_batches > 1 {
+        println!(); // New line after progress dots
+    }
+    
+    Ok(all_klines)
+}
+
 async fn download_historical_data(
-    client: &BybitClient,
     symbols: &[String],
     category: &str,
     interval: &str,
-    limit: usize,
+    total_limit: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let interval_dir = interval_to_dirname(interval);
-    println!("\n=== Downloading {} {} data for {} ===", interval_dir, category, symbols.len());
+    let num_batches = (total_limit + 999) / 1000;
+    
+    println!("\n=== Downloading {} {} data for {} symbols ===", interval_dir, category, symbols.len());
+    if total_limit > 1000 {
+        println!("Will make {} API requests per symbol to get {} bars", num_batches, total_limit);
+    }
     
     let hist_dir = Path::new("historical_data").join(category).join(&interval_dir);
     fs::create_dir_all(&hist_dir)?;
     
-    // Create MARKETS.TXT
     let markets_path = hist_dir.join("MARKETS.TXT");
     let mut markets_file = File::create(&markets_path)?;
     
-    for symbol in symbols {
-        println!("Downloading {} data for {}...", interval_dir, symbol);
+    for (idx, symbol) in symbols.iter().enumerate() {
+        print!("[{}/{}] Downloading {} data for {}...", idx + 1, symbols.len(), interval_dir, symbol);
+        std::io::stdout().flush().ok();
         
-        match download_kline_data(client, symbol, interval, limit).await {
+        match download_kline_data_paginated(symbol, interval, total_limit).await {
             Ok(klines) => {
                 if klines.is_empty() {
-                    println!("  No data available for {}", symbol);
+                    println!(" No data available");
                     continue;
                 }
                 
@@ -182,17 +277,15 @@ async fn download_historical_data(
                     writeln!(markets_file, "{}", file_path.display())?;
                 }
                 
-                println!("  ✓ Downloaded {} bars for {}", klines.len(), symbol);
+                println!(" ✓ {} bars", klines.len());
             }
             Err(e) => {
-                eprintln!("  ✗ Error fetching data for {}: {}", symbol, e);
+                println!(" ✗ Error: {}", e);
             }
         }
-        
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
     
-    println!("Data saved to: {}", hist_dir.display());
+    println!("\nData saved to: {}", hist_dir.display());
     println!("Markets file: {}", markets_path.display());
     
     Ok(())
@@ -204,10 +297,14 @@ async fn main() -> Result<(), Error> {
     let client = BybitClient::new();
 
     let interval = interval_to_string(&args.interval);
-    let limit = args.limit.min(1000); // Bybit max is 1000
+    let total_limit = args.limit;
 
     println!("=== Bybit TradFi Historical Data Downloader ===");
-    println!("Interval: {} | Limit: {} bars\n", interval_to_dirname(interval), limit);
+    println!("Interval: {} | Total bars: {}", interval_to_dirname(interval), total_limit);
+    if total_limit > 1000 {
+        println!("Note: Will make multiple API requests to fetch {} bars", total_limit);
+    }
+    println!();
     
     // Get Spot symbols
     let spot_symbols = if args.spot {
@@ -219,7 +316,7 @@ async fn main() -> Result<(), Error> {
                     .filter(|t| data_streamer::tradfi_filter::is_tradfi_symbol(&t.symbol))
                     .map(|t| t.symbol.clone())
                     .collect();
-                println!("Found {} tokenized stocks\n", xstocks.len());
+                println!("Found {} tokenized stocks", xstocks.len());
                 xstocks
             }
             Err(e) => {
@@ -247,7 +344,7 @@ async fn main() -> Result<(), Error> {
                     })
                     .map(|t| t.symbol.clone())
                     .collect();
-                println!("Found {} TradFi linear tickers\n", tradfi.len());
+                println!("Found {} TradFi linear tickers", tradfi.len());
                 tradfi
             }
             Err(e) => {
@@ -261,23 +358,22 @@ async fn main() -> Result<(), Error> {
 
     // Download data
     if !spot_symbols.is_empty() {
-        download_historical_data(&client, &spot_symbols, "spot", interval, limit)
+        download_historical_data(&spot_symbols, "spot", interval, total_limit)
             .await
             .unwrap_or_else(|e| eprintln!("Error: {}", e));
     }
     
     if !linear_symbols.is_empty() {
-        download_historical_data(&client, &linear_symbols, "linear", interval, limit)
+        download_historical_data(&linear_symbols, "linear", interval, total_limit)
             .await
             .unwrap_or_else(|e| eprintln!("Error: {}", e));
     }
 
     println!("\n=== Download Complete ===");
-    println!("\nUsage examples:");
-    println!("  Daily:   cargo run --bin download_historical -- --interval D");
-    println!("  Hourly:  cargo run --bin download_historical -- --interval 60");
-    println!("  15-min:  cargo run --bin download_historical -- --interval 15");
-    println!("  Custom:  cargo run --bin download_historical -- --interval 60 --limit 500");
+    println!("\nExamples:");
+    println!("  1000 bars:  cargo run --bin download_historical -- --interval 60 --limit 1000");
+    println!("  2000 bars:  cargo run --bin download_historical -- --interval 60 --limit 2000");
+    println!("  5000 bars:  cargo run --bin download_historical -- --interval 15 --limit 5000");
 
     Ok(())
 }
