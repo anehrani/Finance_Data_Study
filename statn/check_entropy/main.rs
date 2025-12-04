@@ -2,7 +2,7 @@
 
 use std::env;
 use std::io::Read;
-use statn::io::read_market_file;
+use statn::core::io::read_market_file;
 use finance_tools::clean_tails;
 
 mod entropy;

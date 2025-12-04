@@ -1,10 +1,10 @@
 [package]
-name = "try_indicators"
+name = "check_entropy"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [[bin]]
-name = "try_indicators"
+name = "check_entropy"
 path = "main.rs"
 
 [dependencies]

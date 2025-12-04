@@ -2,7 +2,7 @@
 
 use matlib::{qsortd, find_slope, range_expansion, jump};
 use stats::entropy;
-use statn::core::data_utils::chart::BarData;
+use statn::core::data::chart::BarData;
 use finance_tools::atr;
 
 /*

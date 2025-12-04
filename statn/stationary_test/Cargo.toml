@@ -1,10 +1,10 @@
 [package]
-name = "gap_analysis"
+name = "stationary_test"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "gap_analysis"
+name = "stationary_test"
 path = "main.rs"
 
 [dependencies]

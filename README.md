@@ -1,122 +1,83 @@
-<p align="left">
-  <img alt="Barbotine Arbitrage System Logo" width="10%" height="auto" src="https://i.ibb.co/gy9mb2k/logo.png">
-</p>
+Yes, Chapters 2 and 3 of the book provide a rigorous, systematic pipeline specifically for designing and refining custom indicators.
 
-[![Twitter @nelsodot](https://img.shields.io/twitter/url/https/twitter.com/nelsorex.svg?style=social&label=%20%40nelsorex)](https://twitter.com/nelsorex)
-[![GitHub @nelso0](https://img.shields.io/github/followers/nelso0?label=follow&style=social)](https://github.com/nelso0)
+Instead of guessing which math formula might work, you should follow this 5-Step Process derived from the book.
 
-## Table of content
-* [Features](#features)
-* [Demo](#demo)
-* [Prerequisites](#prerequis)
-* [Installation](#installation)
-* [Usage](#usage)
-* [Contact](#contact)
-* [Real version](#full-version)
-<a name="features"/>
- 
-## Features
+Step 1: Ensure Stationarity (The Foundation)
 
-* Compatible with all [ccxt](https://github.com/ccxt/ccxt) exchanges
-* Look for oportunities on up to 30 simultaneous exchanges at the same time
-* Rebalance system with balance simulation to ensure that all possible opportunities are taken into account
-* Full live tracking on Telegram and Discord webhooks
-* Permanent live rate display in the terminal
+Before checking if an indicator predicts profits, you must check if it "behaves" mathematically. If the mean or variance of your indicator drifts over time (e.g., it was 10.0 in the 1990s but 50.0 in 2020), a model cannot learn from it.
 
-<a name="demo"/>
- 
-## Demo
+The Test: Run your raw indicator through STATN.CPP (Chapter 2). Look for "Runs" (how long it stays above/below the median). If you see runs of >512 bars, it is non-stationary.
 
-Message from after the video: the nb_exchanges variable in the config is now deleted, the bot automatically detects the number of exchanges you put.
+How to Improve it:
 
-Here is the setup & demo video for beginners: https://youtu.be/Uw6ajbODid0
+Oscillate it: Never use raw values (like Price or Volume). Use the difference between the current value and a past value (Momentum) or the difference between a fast and slow moving average.
 
-<a name="prerequis"/>
- 
-## Prerequisites
+Ratios: If the data scales with price (like Volume), use ratios or logs of ratios.
 
-* Python 3+ inferior to 3.12! (for windows users: if python or pip isn't recognized as a command, make sure you have installed python by checking the box "add to PATH")
+Z-Score: Subtract the mean and divide by the standard deviation over a rolling window.
 
-<a name="installation"/>
- 
-## Installation
+Step 2: Maximize Entropy (The Information Content)
 
-1. Clone the repository 
-```sh
-git clone https://github.com/nelso0/barbotine-arbitrage-bot # you can also download the zip file
-```
-2. Go to the repository you just cloned
-```sh
-cd barbotine-arbitrage-bot
-```
-3. Install all the requirements to run the arbitrage system
-```sh
-pip install -r requirements.txt
-```
-4. Set your configuration details in [exchange_config.py](exchange_config.py)
-5. Run with:
-```sh
-python run.py
-```
+An indicator is useless if 90% of its values are clumped near zero and 10% are massive outliers (like price shocks). This has Low Entropy (low information).
 
-<a name="usage"/>
- 
-## Usage
+The Test: Run your indicator through ENTROPY.CPP (Chapter 2).
 
-You can also run it with one line like this:
+Goal: A relative entropy score > 0.5.
 
-```sh
-python run.py <mode> [renew-time-minutes] <balance-usdt-to-use> <symbol> <exchanges list separated by commas (no space!)>
-```
+Red Flag: A score < 0.1 means the indicator is mostly noise or empty space.
 
+How to Improve it:
 
-* ```<mode>``` = the mode you wanna use among ```fake-money```, ```classic```, and ```delta-neutral```. See #full-version for classic and delta-neutral modes. 
-  
-  * ```fake-money``` will run the bot with the balance-usdt-to-use you put, with a virtual balance, just to test.
-  * ```classic``` will run the bot with real USDT.
-  * ```delta-neutral```will run the bot with real USDT also, but in a delta-neutral situation. (a bit less profits but you won't loose a cent if the crypto you're using dump in 5 minutes (for very very careful people).
-  
-  
-  
-* ```[renew-time-minutes]``` = ONLY IF YOU ENABLED RENEWAL SETTING IN THE CONFIG. If you enabled it, you have to put the number of minutes a session should last. After each session, the bot sells all the assets back to USDT and start again. It's for volatile assets if you want to refresh the price at which the bot bought the asset.
+Log Transformation: If you have a "fat tail" (rare giant spikes), apply Log() to the indicator. This pulls outliers in.
 
+Tail-Only Cleaning: Use the algorithm on Page 29. It identifies the top/bottom 5% of outliers and squashes them toward the center using a logarithmic curve without changing their sort order. (See the RawJump vs. CleanedJump example we discussed).
 
+Sigmoid/Tanh: If you need to bound the indicator between -1 and +1, feed it through a tanh() function (Page 26).
 
-* ```<balance-usdt-to-use>``` = how to be clearer? 
+Step 3: Linearize the Relationship (The Transformation)
 
+Most trading algorithms (especially the Regularized Linear Model in Chapter 3) prefer linear relationships. If your indicator is "cyclical" (e.g., Time of Day) or "curved," a linear model will fail.
 
+The System: Instead of feeding just the raw indicator X into your model, expand it using the Polynomial Expansion technique (Page 67).
 
-* ```<symbol>``` = The symbol you wanna arbitrage on. Every time it renews, it sells all the crypto and rebuy the crypto asset at the new price. 
+Action: Feed X, X^2, and X^3 into the optimizer.
 
+Why? This allows the linear model to find non-linear patterns. If X^2 gets a high weight and X gets a zero weight, you know the relationship is parabolic (volatility), not directional.
 
+Step 4: Regularization (The Selection)
 
-* ```<exchanges list>``` = the exchanges you want to use among all the CCXT-compatible exchanges. At least 2 exchanges, theorically infinite maximum. Don't forget to configure the exchanges in [exchange_config.py](exchange_config.py).
+Do not try to manually guess the perfect lookback (e.g., "Should I use RSI 14 or RSI 15?").
 
+The System: Use the "Spaghetti on the Wall" method demonstrated in CD_MA.CPP (Chapter 3).
 
-Note: you can put a minimum profit in USD or % in [exchange_config.py](exchange_config.py). The bot will only take the trade if the profit is > (superior) to your value. You can also use pairs without USDT, like ETH/BTC.
+Action:
 
-Examples:
+Generate many versions of your custom indicator (e.g., Lookbacks of 5, 10, 15, 20, 25... 100).
 
-```sh
-python run.py fake-money 15 500 EOS/USDT binance,okx,kucoin    # run the system with 500 USDT and renew the session every 15 minutes, with binance okx and kucoin
-```
-```sh
-python run.py classic 15 1000 SOL/USDT binance,poloniex,kucoin   # run the system with 1000 USDT on binance phemex and bybit on SOL/USDT, and renew the session every 15 minutes.
-```
-```sh
-python run.py delta-neutral 60 750 BTC/USDT okx,cryptocom,huobi   # run the system in a delta-neutral situation with 750 USDT and renew the session each hour, on okx crypto.com and huobi. Note that with same amount of USDT, the delta-neutral mode will have 2/3 of the profits of the classic mode because it has less liquidity to invest in arbitrage opportunities.
-```
+Feed all of them into the CDMODEL (Regularized Linear Model).
 
-## Contact
+Run the Descending Lambda Path.
 
-[nelso@barbotine.xyz](https://barbotine.xyz)
+The Result: The model will automatically set the weights (Beta) of the useless lookbacks to 0.0. It will keep only the specific lookback(s) that contain real predictive power. This is scientifically superior to guessing.
 
-<a name="full-version"/>
- 
-## Full version
+Step 5: Sensitivity Analysis (The Stress Test)
 
-There is also a full version which operates with real money.
+Once you think you have a "Best" version of your indicator, you must prove it isn't a fluke.
 
-Get the source code of that real version here: [barbotine.xyz/arbitrage](https://barbotine.xyz/shop)
+The Test: Run SENSITIV.CPP (Chapter 4).
 
-/!\ No financial advise, DYOR /!\
+Action: Vary the parameters of your indicator (e.g., the lookback window) from minimum to maximum.
+
+Pass Criteria: You must see a Broad Peak. If your indicator works at Lookback 14 but fails at 13 and 15, throw it away. It is overfit.
+
+Summary of the Systematic Approach
+
+Design: Create the logic.
+
+STATN: Fix the drift (make it stationary).
+
+ENTROPY: Fix the distribution (remove/squash outliers).
+
+CDMODEL: Find the best parameters (let the math choose the lookback).
+
+SENSITIV: Verify stability (ensure it works across a range).

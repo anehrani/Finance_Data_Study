@@ -19,7 +19,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 5 {
-        println!("\nUsage: gap_analysis  Lookback  Fractile  Version  Filename");
+        println!("\nUsage:   Lookback  Fractile  Version  Filename");
         println!("  lookback - Lookback for trend and volatility");
         println!("  fractile - Fractile (0-1, typically 0.5) for gap analysis");
         println!("  version - 0=raw stat; 1=current-prior; >1=current-longer");

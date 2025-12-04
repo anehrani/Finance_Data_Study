@@ -9,7 +9,8 @@ members = [
     "try_cd_comb",
     "try_diff_ev",
     "check_sensitivity",
-    "gap_analysis",
+    "check_entropy",
+    "stationary_test",
     "train_bias",
     "overlap",
     "cross_validation_mkt",
@@ -35,20 +36,6 @@ finance_tools = { path = "src/finance_tools" }
 
 [dev-dependencies]
 tempfile = "3.10"
-
-# [[bin]]
-# name = "boot"
-# path = "src/boot/main.rs"
-
-# [[bin]]
-# name = "cscv"
-# path = "src/cscv/main.rs"
-
-# [[bin]]
-# name = "dev_ma"
-# path = "src/dev_ma/main.rs"
-
-
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
