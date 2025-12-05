@@ -73,8 +73,13 @@ pub fn write_results<P: AsRef<Path>>(
     config: &Config,
     training: &TrainingResult,
     evaluation: &EvaluationResult,
-    specs: &[IndicatorSpec],
+    _specs: &[IndicatorSpec],
 ) -> Result<()> {
+    // Create parent directory if it doesn't exist
+    if let Some(parent) = path.as_ref().parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    
     let mut file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -91,7 +96,9 @@ pub fn write_results<P: AsRef<Path>>(
     writeln!(file, "  Number of long-term lookbacks: {}", config.n_long)?;
     writeln!(file, "  Number of short-term lookbacks: {}", config.n_short)?;
     writeln!(file, "  Alpha: {:.4}", config.alpha)?;
-    writeln!(file, "  Number of indicators: {}", config.n_vars())?;
+    writeln!(file, "  MA indicators: {}", config.n_ma_vars())?;
+
+    writeln!(file, "  Total indicators: {}", config.n_vars())?;
     writeln!(file, "  Test cases: {}", config.n_test)?;
     writeln!(file)?;
     
@@ -112,10 +119,10 @@ pub fn write_results<P: AsRef<Path>>(
         writeln!(file)?;
     }
     
-    // Beta coefficients
+    // Beta coefficients for MA indicators
     writeln!(
         file,
-        "Beta Coefficients (In-sample explained variance: {:.3}%):",
+        "MA Beta Coefficients (In-sample explained variance: {:.3}%):",
         100.0 * evaluation.in_sample_explained
     )?;
     writeln!(
@@ -140,6 +147,9 @@ pub fn write_results<P: AsRef<Path>>(
         writeln!(file)?;
     }
     writeln!(file)?;
+    
+    // RSI beta coefficients if enabled
+
     
     // Out-of-sample results
     writeln!(file, "Out-of-Sample Results:")?;

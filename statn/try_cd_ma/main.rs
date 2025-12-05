@@ -1,15 +1,17 @@
 use anyhow::Result;
+use clap::Parser;
 use try_cd_ma::*;
 
 fn main() -> Result<()> {
     println!("CD_MA - Moving Average Crossover Indicator Selection\n");
     
     // Load configuration
-    let config = Config::load()?;
+    let config = Config::parse();
+    config.validate()?;
     
     // Load market data
     println!("Loading market data...");
-    let prices = load_prices(&config.data_file)
+    let prices = load_prices(std::path::Path::new(&config.data_file))
         .map_err(|e| anyhow::anyhow!("{}", e))?;
     
     // Split into training and test sets
@@ -20,8 +22,14 @@ fn main() -> Result<()> {
     println!("Test cases: {}", split.test_data.len() - split.max_lookback);
     
     // Generate indicator specifications
-    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short);
-    println!("Number of indicators: {}", specs.len());
+    let specs = generate_specs(
+        config.lookback_inc,
+        config.n_long,
+        config.n_short,
+    );
+    println!("MA indicators: {}", config.n_ma_vars());
+
+    println!("Total indicators: {}", specs.len());
     
     // Compute training indicators
     let n_train = split.train_data.len() - split.max_lookback - 1;
@@ -73,9 +81,43 @@ fn main() -> Result<()> {
         config.n_vars(),
     )?;
     
+    // Run backtest on test data
+    println!("\n{}", "=".repeat(60));
+    println!("Running Backtest");
+    println!("{}", "=".repeat(60));
+    
+    // Convert log prices to actual prices for backtesting
+    let test_prices_actual: Vec<f64> = split.test_data
+        .iter()
+        .skip(split.max_lookback)
+        .take(config.n_test)
+        .map(|&log_price| log_price.exp())
+        .collect();
+    
+    let initial_capital = 100_000.0;
+    let transaction_cost = 0.1; // 0.1% transaction cost
+    
+    let backtest_result = try_cd_ma::run_backtest(
+        &training_result.model,
+        &test_prices_actual,
+        &test_data.data,
+        config.n_vars(),
+        initial_capital,
+        transaction_cost,
+    )?;
+    
+    // Write backtest results
+    let backtest_output = format!("{}backtest_results.txt", config.output_path);
+    try_cd_ma::write_backtest_results(&backtest_output, &backtest_result)?;
+    
     // Write results
+
+    // Note: Model saving removed due to serialization requirements
+    
+    // Write results
+    let results_path = format!("{}CD_MA.LOG", config.output_path);
     write_results(
-        &config.output_file,
+        &results_path,
         &config,
         &training_result,
         &evaluation_result,
@@ -83,7 +125,10 @@ fn main() -> Result<()> {
     )?;
     
     // Print summary
-    println!("\nSummary:");
+    println!("\n{}", "=".repeat(60));
+    println!("Summary");
+    println!("{}", "=".repeat(60));
+    println!("\nModel Performance:");
     println!(
         "  In-sample explained variance: {:.3}%",
         100.0 * evaluation_result.in_sample_explained
@@ -91,6 +136,28 @@ fn main() -> Result<()> {
     println!(
         "  OOS total return: {:.5} ({:.3}%)",
         evaluation_result.oos_return, evaluation_result.oos_return_pct
+    );
+    
+    println!("\nBacktest Performance:");
+    println!(
+        "  Total return: {:.2}%",
+        backtest_result.roi_percent
+    );
+    println!(
+        "  Total trades: {}",
+        backtest_result.num_trades
+    );
+    println!(
+        "  Win rate: {:.2}%",
+        backtest_result.win_rate
+    );
+    println!(
+        "  Max drawdown: {:.2}%",
+        backtest_result.max_drawdown
+    );
+    println!(
+        "  Sharpe ratio: {:.3}",
+        backtest_result.sharpe_ratio
     );
     
     Ok(())

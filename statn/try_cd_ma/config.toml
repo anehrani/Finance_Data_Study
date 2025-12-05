@@ -2,10 +2,10 @@
 # Moving Average Crossover Indicator Selection
 
 # Increment to long-term lookback
-lookback_inc = 10
+lookback_inc = 2
 
 # Number of long-term lookbacks to test
-n_long = 20
+n_long = 10
 
 # Number of short-term lookbacks to test
 n_short = 10
@@ -15,10 +15,10 @@ n_short = 10
 alpha = 0.5
 
 # Path to market data file (YYYYMMDD Price format)
-data_file = "market_data.txt"
+data_file = "../../data/historical_data/^GSPC.txt"
 
 # Path to output results file
-output_file = "CD_MA.LOG"
+output_file = "results/CD_MA.LOG"
 
 # Number of test cases (default: 252 = one trading year)
 n_test = 252

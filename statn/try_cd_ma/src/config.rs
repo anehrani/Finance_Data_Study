@@ -1,154 +1,61 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use serde::Deserialize;
-use std::path::PathBuf;
+
 
 /// Configuration for CD_MA analysis
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Parser)]
+#[command(name = "try_cd_ma")]
+#[command(about = "Moving Average Crossover Indicator Selection using Coordinate Descent")]
 pub struct Config {
+
     /// Increment to long-term lookback
+    #[arg(long, default_value_t = 2)]
     pub lookback_inc: usize,
     
     /// Number of long-term lookbacks to test
+    #[arg(long, default_value_t = 6)]
     pub n_long: usize,
     
     /// Number of short-term lookbacks to test
+    #[arg(long, default_value_t = 5)]
     pub n_short: usize,
     
     /// Alpha parameter for elastic net (0-1]
+    #[arg(long, default_value_t = 0.5)]
     pub alpha: f64,
     
     /// Path to market data file (YYYYMMDD Price format)
-    pub data_file: PathBuf,
+    #[arg(value_name = "DATA_FILE")]
+    pub data_file: String,
     
     /// Path to output results file
-    #[serde(default = "default_output_file")]
-    pub output_file: PathBuf,
+    #[arg(long, default_value = "results/")]
+    pub output_path: String,
     
     /// Number of test cases (default: 252 = one year)
-    #[serde(default = "default_n_test")]
+    #[arg(long, default_value_t = 252)]
     pub n_test: usize,
     
     /// Number of cross-validation folds
-    #[serde(default = "default_n_folds")]
+    #[arg(long, default_value_t = 10)]
     pub n_folds: usize,
     
     /// Number of lambda values to test
-    #[serde(default = "default_n_lambdas")]
+    #[arg(long, default_value_t = 50)]
     pub n_lambdas: usize,
     
     /// Maximum iterations for coordinate descent
-    #[serde(default = "default_max_iterations")]
+    #[arg(long, default_value_t = 1000)]
     pub max_iterations: usize,
     
     /// Convergence tolerance
-    #[serde(default = "default_tolerance")]
+    #[arg(long, default_value_t = 1e-9)]
     pub tolerance: f64,
-}
-
-fn default_output_file() -> PathBuf {
-    PathBuf::from("CD_MA.LOG")
-}
-
-fn default_n_test() -> usize {
-    252
-}
-
-fn default_n_folds() -> usize {
-    10
-}
-
-fn default_n_lambdas() -> usize {
-    50
-}
-
-fn default_max_iterations() -> usize {
-    1000
-}
-
-fn default_tolerance() -> f64 {
-    1e-9
-}
-
-/// Command-line arguments
-#[derive(Parser, Debug)]
-#[command(name = "try_cd_ma")]
-#[command(about = "Moving Average Crossover Indicator Selection using Coordinate Descent")]
-pub struct Args {
-    /// Path to TOML configuration file
-    #[arg(short, long)]
-    pub config: Option<PathBuf>,
     
-    /// Increment to long-term lookback
-    #[arg(value_name = "LOOKBACK_INC")]
-    pub lookback_inc: Option<usize>,
-    
-    /// Number of long-term lookbacks
-    #[arg(value_name = "N_LONG")]
-    pub n_long: Option<usize>,
-    
-    /// Number of short-term lookbacks
-    #[arg(value_name = "N_SHORT")]
-    pub n_short: Option<usize>,
-    
-    /// Alpha parameter (0-1]
-    #[arg(value_name = "ALPHA")]
-    pub alpha: Option<f64>,
-    
-    /// Market data file
-    #[arg(value_name = "FILENAME")]
-    pub filename: Option<PathBuf>,
 }
 
 impl Config {
-    /// Load configuration from TOML file
-    pub fn from_file(path: &PathBuf) -> Result<Self> {
-        let content = std::fs::read_to_string(path)
-            .with_context(|| format!("Failed to read config file: {}", path.display()))?;
-        
-        let config: Config = toml::from_str(&content)
-            .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
-        
-        config.validate()?;
-        Ok(config)
-    }
-    
-    /// Create configuration from command-line arguments
-    pub fn from_args(args: &Args) -> Result<Self> {
-        let config = Config {
-            lookback_inc: args.lookback_inc
-                .ok_or_else(|| anyhow::anyhow!("lookback_inc is required"))?,
-            n_long: args.n_long
-                .ok_or_else(|| anyhow::anyhow!("n_long is required"))?,
-            n_short: args.n_short
-                .ok_or_else(|| anyhow::anyhow!("n_short is required"))?,
-            alpha: args.alpha
-                .ok_or_else(|| anyhow::anyhow!("alpha is required"))?,
-            data_file: args.filename.clone()
-                .ok_or_else(|| anyhow::anyhow!("filename is required"))?,
-            output_file: default_output_file(),
-            n_test: default_n_test(),
-            n_folds: default_n_folds(),
-            n_lambdas: default_n_lambdas(),
-            max_iterations: default_max_iterations(),
-            tolerance: default_tolerance(),
-        };
-        
-        config.validate()?;
-        Ok(config)
-    }
-    
-    /// Load configuration from either file or command-line arguments
-    pub fn load() -> Result<Self> {
-        let args = Args::parse();
-        
-        if let Some(config_path) = &args.config {
-            Self::from_file(config_path)
-        } else {
-            Self::from_args(&args)
-        }
-    }
-    
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<()> {
         if self.alpha <= 0.0 || self.alpha > 1.0 {
@@ -177,11 +84,25 @@ impl Config {
         
         Ok(())
     }
+
+    /// Load configuration from TOML file
+    pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> anyhow::Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        let config: Config = toml::from_str(&content)?;
+        Ok(config)
+    }
     
     /// Get total number of indicator variables
     pub fn n_vars(&self) -> usize {
         self.n_long * self.n_short
     }
+    
+    /// Get number of MA indicator variables
+    pub fn n_ma_vars(&self) -> usize {
+        self.n_long * self.n_short
+    }
+    
+
     
     /// Get maximum lookback period
     pub fn max_lookback(&self) -> usize {
@@ -200,8 +121,8 @@ mod tests {
             n_long: 20,
             n_short: 10,
             alpha: 0.5,
-            data_file: PathBuf::from("test.txt"),
-            output_file: PathBuf::from("output.log"),
+            data_file: "test.txt".to_string(),
+            output_path: "output.log".to_string(),
             n_test: 252,
             n_folds: 10,
             n_lambdas: 50,
@@ -225,8 +146,8 @@ mod tests {
             n_long: 20,
             n_short: 10,
             alpha: 0.5,
-            data_file: PathBuf::from("test.txt"),
-            output_file: PathBuf::from("output.log"),
+            data_file: "test.txt".to_string(),
+            output_path: "output.log".to_string(),
             n_test: 252,
             n_folds: 10,
             n_lambdas: 50,
