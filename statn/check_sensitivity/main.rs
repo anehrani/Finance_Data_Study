@@ -59,6 +59,7 @@ fn main() {
         &best,
         &low_bounds,
         &high_bounds,
+        std::path::Path::new("SENS.LOG"),
     ) {
         Ok(_) => println!("✓ Sensitivity analysis completed. Results saved to SENS.LOG\n"),
         Err(e) => println!("✗ Error: {}\n", e),
@@ -82,6 +83,7 @@ fn main() {
         &best,
         &low_bounds,
         &high_bounds,
+        std::path::Path::new("SENS.LOG"),
     ) {
         Ok(_) => println!("✓ Sensitivity analysis completed. Results saved to SENS.LOG\n"),
         Err(e) => println!("✗ Error: {}\n", e),
@@ -105,6 +107,7 @@ fn main() {
         &best,
         &low_bounds,
         &high_bounds,
+        std::path::Path::new("SENS.LOG"),
     ) {
         Ok(_) => println!("✓ Sensitivity analysis completed. Results saved to SENS.LOG\n"),
         Err(e) => println!("✗ Error: {}\n", e),
