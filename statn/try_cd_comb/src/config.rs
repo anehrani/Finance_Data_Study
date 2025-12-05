@@ -15,6 +15,10 @@ pub struct Config {
     /// Number of short-term lookbacks to test
     pub n_short: usize,
 
+    /// Crossover types to generate (e.g., ["ma", "rsi"])
+    #[serde(default = "default_crossover_types")]
+    pub crossover_types: Vec<crate::indicators::CrossoverType>,
+
     /// RSI periods to include (optional)
     #[serde(default)]
     pub rsi_periods: Vec<usize>,
@@ -80,6 +84,10 @@ fn default_tolerance() -> f64 {
     1e-9
 }
 
+fn default_crossover_types() -> Vec<crate::indicators::CrossoverType> {
+    vec![crate::indicators::CrossoverType::Ma]
+}
+
 /// Command-line arguments
 #[derive(Parser, Debug)]
 #[command(name = "try_cd_ma")]
@@ -100,6 +108,10 @@ pub struct Args {
     /// Number of short-term lookbacks
     #[arg(value_name = "N_SHORT")]
     pub n_short: Option<usize>,
+
+    /// Crossover types (comma-separated: ma, rsi)
+    #[arg(long, value_delimiter = ',')]
+    pub crossover_types: Option<Vec<String>>,
 
     /// RSI periods (comma-separated)
     #[arg(long, value_delimiter = ',')]
@@ -140,6 +152,18 @@ impl Config {
                 .ok_or_else(|| anyhow::anyhow!("n_long is required"))?,
             n_short: args.n_short
                 .ok_or_else(|| anyhow::anyhow!("n_short is required"))?,
+            crossover_types: if let Some(types) = &args.crossover_types {
+                types.iter().map(|s| match s.to_lowercase().as_str() {
+                    "ma" => Ok(crate::indicators::CrossoverType::Ma),
+                    "rsi" => Ok(crate::indicators::CrossoverType::Rsi),
+                    "ema" => Ok(crate::indicators::CrossoverType::Ema),
+                    "macd" => Ok(crate::indicators::CrossoverType::Macd),
+                    "roc" => Ok(crate::indicators::CrossoverType::Roc),
+                    _ => Err(anyhow::anyhow!("Unknown crossover type: {}", s)),
+                }).collect::<Result<Vec<_>>>()?
+            } else {
+                default_crossover_types()
+            },
             rsi_periods: args.rsi_periods.clone().unwrap_or_default(),
             macd_configs: if args.include_macd {
                 vec![(12, 26, 9)]  // Default MACD
@@ -204,7 +228,7 @@ impl Config {
     
     /// Get total number of indicator variables
     pub fn n_vars(&self) -> usize {
-        let ma_count = self.n_long * self.n_short;
+        let ma_count = self.n_long * self.n_short * self.crossover_types.len();
         let rsi_count = self.rsi_periods.len();
         let macd_count = self.macd_configs.len();
         ma_count + rsi_count + macd_count
@@ -212,7 +236,17 @@ impl Config {
     
     /// Get maximum lookback period
     pub fn max_lookback(&self) -> usize {
-        let ma_max = self.n_long * self.lookback_inc;
+        let mut ma_max = if !self.crossover_types.is_empty() {
+            self.n_long * self.lookback_inc
+        } else {
+            0
+        };
+        
+        // If MACD crossover is used, we need extra lookback for the signal line (9)
+        if self.crossover_types.contains(&crate::indicators::CrossoverType::Macd) {
+            ma_max += 9;
+        }
+
         let rsi_max = self.rsi_periods.iter().cloned().max().unwrap_or(0);
         // MACD needs slow_period + signal_period
         let macd_max = self.macd_configs.iter()
@@ -233,6 +267,7 @@ mod tests {
             lookback_inc: 10,
             n_long: 20,
             n_short: 10,
+            crossover_types: vec![crate::indicators::CrossoverType::Ma],
             rsi_periods: vec![],
             macd_configs: vec![],
             alpha: 0.5,
@@ -260,6 +295,7 @@ mod tests {
             lookback_inc: 10,
             n_long: 20,
             n_short: 10,
+            crossover_types: vec![crate::indicators::CrossoverType::Ma],
             rsi_periods: vec![],
             macd_configs: vec![],
             alpha: 0.5,

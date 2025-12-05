@@ -26,6 +26,11 @@ lookback_inc = 10    # Increment step for lookback periods
 n_long = 7          # Number of long-term lookbacks (10, 20, ..., 200)
 n_short = 3         # Number of short-term lookbacks (10, 20, ..., 100)
 
+# Crossover types to generate
+# Crossover types to generate
+# Options: "ma", "rsi", "ema", "macd", "roc"
+crossover_types = ["ma", "rsi", "macd"]
+
 # 2. RSI (Relative Strength Index)
 # List of periods to include. Leave empty [] to disable.
 rsi_periods = [14, 21, 28]

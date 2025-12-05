@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     println!("Test cases: {}", split.test_data.len() - split.max_lookback);
     
     // Generate indicator specifications
-    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short, &config.rsi_periods, &config.macd_configs);
+    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short, &config.rsi_periods, &config.macd_configs, &config.crossover_types);
     println!("Number of indicators: {}", specs.len());
     
     // Compute training indicators

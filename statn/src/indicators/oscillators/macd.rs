@@ -40,7 +40,7 @@ pub struct MacdOutput {
 ///
 /// # Returns
 /// Vector of EMA values. First `period-1` values are NaN.
-fn ema(data: &[f64], period: usize) -> Vec<f64> {
+pub fn ema(data: &[f64], period: usize) -> Vec<f64> {
     if period == 0 || period > data.len() {
         return vec![f64::NAN; data.len()];
     }

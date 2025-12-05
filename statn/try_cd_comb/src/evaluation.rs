@@ -126,21 +126,30 @@ pub fn write_results<P: AsRef<Path>>(
     writeln!(file)?;
     
     let mut k = 0;
-    for ilong in 0..config.n_long {
-        let long_lookback = (ilong + 1) * config.lookback_inc;
-        write!(file, "{:5} ", long_lookback)?;
-        
-        for _ishort in 0..config.n_short {
-            if training.model.beta[k] != 0.0 {
-                write!(file, "{:9.4}", training.model.beta[k])?;
-            } else {
-                write!(file, "    ----")?;
+    for ctype in &config.crossover_types {
+        writeln!(file, "{:?} Crossover Coefficients:", ctype)?;
+        writeln!(
+            file,
+            "Row: long-term lookback | Columns: short-term lookback (small to large)"
+        )?;
+        writeln!(file)?;
+
+        for ilong in 0..config.n_long {
+            let long_lookback = (ilong + 1) * config.lookback_inc;
+            write!(file, "{:5} ", long_lookback)?;
+            
+            for _ishort in 0..config.n_short {
+                if training.model.beta[k] != 0.0 {
+                    write!(file, "{:9.4}", training.model.beta[k])?;
+                } else {
+                    write!(file, "    ----")?;
+                }
+                k += 1;
             }
-            k += 1;
+            writeln!(file)?;
         }
         writeln!(file)?;
     }
-    writeln!(file)?;
 
     // RSI Coefficients
     if !config.rsi_periods.is_empty() {

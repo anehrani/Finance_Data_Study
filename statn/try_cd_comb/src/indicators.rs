@@ -1,13 +1,26 @@
 use anyhow::Result;
 use indicators::trend::ma::compute_indicators as compute_ma_indicator;
 use indicators::oscillators::rsi::rsi;
-use indicators::oscillators::macd::{macd_histogram, MacdConfig};
+use indicators::oscillators::macd::{macd_histogram, MacdConfig, ema};
 use statn::core::io::compute_targets;
 
+use serde::{Deserialize, Serialize};
+
 /// Specification for an indicator
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CrossoverType {
+    Ma,
+    Rsi,
+    Ema,
+    Macd,
+    Roc,
+}
+
 #[derive(Debug, Clone)]
 pub enum IndicatorSpec {
-    MaCrossover {
+    Crossover {
+        type_: CrossoverType,
         short_lookback: usize,
         long_lookback: usize,
     },
@@ -41,19 +54,23 @@ pub fn generate_specs(
     n_short: usize,
     rsi_periods: &[usize],
     macd_configs: &[(usize, usize, usize)],
+    crossover_types: &[CrossoverType],
 ) -> Vec<IndicatorSpec> {
     let mut specs = Vec::new();
 
-    // MA Crossovers
-    for ilong in 0..n_long {
-        let long_lookback = (ilong + 1) * lookback_inc;
-        for ishort in 0..n_short {
-            let short_lookback = long_lookback * (ishort + 1) / (n_short + 1);
-            let short_lookback = short_lookback.max(1);
-            specs.push(IndicatorSpec::MaCrossover {
-                short_lookback,
-                long_lookback,
-            });
+    // Crossovers
+    for &ctype in crossover_types {
+        for ilong in 0..n_long {
+            let long_lookback = (ilong + 1) * lookback_inc;
+            for ishort in 0..n_short {
+                let short_lookback = long_lookback * (ishort + 1) / (n_short + 1);
+                let short_lookback = short_lookback.max(1);
+                specs.push(IndicatorSpec::Crossover {
+                    type_: ctype,
+                    short_lookback,
+                    long_lookback,
+                });
+            }
         }
     }
 
@@ -82,14 +99,84 @@ pub fn compute_all_indicators(
     
     for (k, spec) in specs.iter().enumerate() {
         let indicators = match spec {
-            IndicatorSpec::MaCrossover { short_lookback, long_lookback } => {
-                compute_ma_indicator(
-                    n_cases,
-                    prices,
-                    start_idx,
-                    *short_lookback,
-                    *long_lookback,
-                )
+
+            IndicatorSpec::Crossover { type_, short_lookback, long_lookback } => {
+                match type_ {
+                    CrossoverType::Ma => compute_ma_indicator(
+                        n_cases,
+                        prices,
+                        start_idx,
+                        *short_lookback,
+                        *long_lookback,
+                    ),
+                    CrossoverType::Rsi => {
+                        let short_rsi = rsi(prices, *short_lookback);
+                        let long_rsi = rsi(prices, *long_lookback);
+                        
+                        let mut inds = vec![0.0; n_cases];
+                        for i in 0..n_cases {
+                            let idx = start_idx + i;
+                            if idx < short_rsi.len() && idx < long_rsi.len() {
+                                inds[i] = short_rsi[idx] - long_rsi[idx];
+                            } else {
+                                inds[i] = f64::NAN;
+                            }
+                        }
+                        inds
+                    },
+                    CrossoverType::Ema => {
+                        let short_ema = ema(prices, *short_lookback);
+                        let long_ema = ema(prices, *long_lookback);
+                        
+                        let mut inds = vec![0.0; n_cases];
+                        for i in 0..n_cases {
+                            let idx = start_idx + i;
+                            if idx < short_ema.len() && idx < long_ema.len() {
+                                inds[i] = short_ema[idx] - long_ema[idx];
+                            } else {
+                                inds[i] = f64::NAN;
+                            }
+                        }
+                        inds
+                    },
+                    CrossoverType::Macd => {
+                        // Use short as fast, long as slow, fixed signal=9
+                        // Note: MACD requires fast < slow usually, but we'll let the grid handle it.
+                        // If fast >= slow, it might be weird but valid math.
+                        let config = MacdConfig {
+                            fast_period: *short_lookback,
+                            slow_period: *long_lookback,
+                            signal_period: 9,
+                        };
+                        let hist = macd_histogram(prices, config);
+                        
+                        let mut inds = vec![0.0; n_cases];
+                        for i in 0..n_cases {
+                            let idx = start_idx + i;
+                            if idx < hist.len() {
+                                inds[i] = hist[idx];
+                            } else {
+                                inds[i] = f64::NAN;
+                            }
+                        }
+                        inds
+                    },
+                    CrossoverType::Roc => {
+                        let short_roc = roc(prices, *short_lookback);
+                        let long_roc = roc(prices, *long_lookback);
+                        
+                        let mut inds = vec![0.0; n_cases];
+                        for i in 0..n_cases {
+                            let idx = start_idx + i;
+                            if idx < short_roc.len() && idx < long_roc.len() {
+                                inds[i] = short_roc[idx] - long_roc[idx];
+                            } else {
+                                inds[i] = f64::NAN;
+                            }
+                        }
+                        inds
+                    }
+                }
             },
             IndicatorSpec::Rsi { period } => {
                 let full_rsi = rsi(prices, *period);
@@ -142,6 +229,20 @@ pub fn compute_indicator_data(
     })
 }
 
+fn roc(data: &[f64], period: usize) -> Vec<f64> {
+    if period == 0 || period >= data.len() {
+        return vec![f64::NAN; data.len()];
+    }
+    
+    let mut roc_values = vec![f64::NAN; data.len()];
+    for i in period..data.len() {
+        if data[i - period] != 0.0 {
+            roc_values[i] = (data[i] - data[i - period]) / data[i - period];
+        }
+    }
+    roc_values
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -150,12 +251,14 @@ mod tests {
     fn test_generate_specs() {
         // Test with RSI and multiple MACD configs
         let macd_configs = vec![(12, 26, 9), (5, 35, 5)];
-        let specs = generate_specs(10, 3, 2, &[14], &macd_configs);
+        let crossover_types = vec![CrossoverType::Ma];
+        let specs = generate_specs(10, 3, 2, &[14], &macd_configs, &crossover_types);
         assert_eq!(specs.len(), 9); // 3 * 2 + 1 RSI + 2 MACD
         
         // Check first spec (MA)
-        if let IndicatorSpec::MaCrossover { long_lookback, .. } = specs[0] {
-            assert_eq!(long_lookback, 10);
+        if let IndicatorSpec::Crossover { type_, long_lookback, .. } = &specs[0] {
+            assert_eq!(*type_, CrossoverType::Ma);
+            assert_eq!(*long_lookback, 10);
         } else {
             panic!("Expected MA crossover");
         }
@@ -186,8 +289,18 @@ mod tests {
         }
         
         // Test without MACD
-        let specs_no_macd = generate_specs(10, 3, 2, &[14], &[]);
+        let specs_no_macd = generate_specs(10, 3, 2, &[14], &[], &crossover_types);
         assert_eq!(specs_no_macd.len(), 7); // 3 * 2 + 1 RSI, no MACD
+
+        // Test with RSI Crossover
+        let crossover_types_rsi = vec![CrossoverType::Rsi];
+        let specs_rsi_cross = generate_specs(10, 3, 2, &[], &[], &crossover_types_rsi);
+        assert_eq!(specs_rsi_cross.len(), 6); // 3 * 2
+        if let IndicatorSpec::Crossover { type_, .. } = &specs_rsi_cross[0] {
+            assert_eq!(*type_, CrossoverType::Rsi);
+        } else {
+            panic!("Expected RSI crossover");
+        }
     }
     
     #[test]
