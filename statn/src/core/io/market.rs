@@ -5,6 +5,7 @@ use std::path::Path;
 /// OHLC market data structure
 #[derive(Debug, Clone)]
 pub struct OhlcData {
+    pub date: Vec<u32>,
     pub open: Vec<f64>,
     pub high: Vec<f64>,
     pub low: Vec<f64>,
@@ -103,6 +104,7 @@ fn read_ohlc_file_impl<P: AsRef<Path>>(filename: P, use_log: bool) -> Result<Ohl
         .map_err(|e| format!("Cannot open market history file: {}", e))?;
     
     let reader = BufReader::new(file);
+    let mut date = Vec::new();
     let mut open = Vec::new();
     let mut high = Vec::new();
     let mut low = Vec::new();
@@ -126,6 +128,9 @@ fn read_ohlc_file_impl<P: AsRef<Path>>(filename: P, use_log: bool) -> Result<Ohl
             return Err(format!("Invalid date on line {}", line_num + 1));
         }
         
+        let date_val = date_str.parse::<u32>()
+            .map_err(|_| format!("Invalid date format on line {}", line_num + 1))?;
+
         // Parse prices
         let parts: Vec<&str> = line[8..]
             .split(|c: char| c == ' ' || c == '\t' || c == ',')
@@ -164,19 +169,19 @@ fn read_ohlc_file_impl<P: AsRef<Path>>(filename: P, use_log: bool) -> Result<Ohl
             high.push(h.ln());
             low.push(l.ln());
             close.push(c.ln());
-        } else {
             open.push(o);
             high.push(h);
             low.push(l);
             close.push(c);
         }
+        date.push(date_val);
     }
     
     if open.is_empty() {
         return Err("No valid data found in file".to_string());
     }
     
-    Ok(OhlcData { open, high, low, close })
+    Ok(OhlcData { date, open, high, low, close })
 }
 
 #[cfg(test)]
@@ -217,6 +222,7 @@ mod tests {
         
         let data = read_ohlc_file(file.path()).unwrap();
         assert_eq!(data.len(), 2);
+        assert_eq!(data.date[0], 20200101);
         assert!((data.open[0] - 100.0_f64.ln()).abs() < 1e-10);
     }
     

@@ -151,37 +151,7 @@ pub fn write_results<P: AsRef<Path>>(
         writeln!(file)?;
     }
 
-    // RSI Coefficients
-    if !config.rsi_periods.is_empty() {
-        writeln!(file, "RSI Coefficients:")?;
-        for &period in &config.rsi_periods {
-            if k < training.model.beta.len() {
-                if training.model.beta[k] != 0.0 {
-                    writeln!(file, "  Period {:3}: {:9.4}", period, training.model.beta[k])?;
-                } else {
-                    writeln!(file, "  Period {:3}:     ----", period)?;
-                }
-                k += 1;
-            }
-        }
-        writeln!(file)?;
-    }
 
-    // MACD Coefficients
-    if !config.macd_configs.is_empty() {
-        writeln!(file, "MACD Coefficients (Histogram):")?;
-        for &(fast, slow, signal) in &config.macd_configs {
-            if k < training.model.beta.len() {
-                if training.model.beta[k] != 0.0 {
-                    writeln!(file, "  MACD({},{},{}): {:9.4}", fast, slow, signal, training.model.beta[k])?;
-                } else {
-                    writeln!(file, "  MACD({},{},{}):     ----", fast, slow, signal)?;
-                }
-                k += 1;
-            }
-        }
-        writeln!(file)?;
-    }
     
     // Out-of-sample results
     writeln!(file, "Out-of-Sample Results:")?;

@@ -31,15 +31,4 @@ n_short = 3         # Number of short-term lookbacks (10, 20, ..., 100)
 # Options: "ma", "rsi", "ema", "macd", "roc"
 crossover_types = ["ma", "rsi", "macd"]
 
-# 2. RSI (Relative Strength Index)
-# List of periods to include. Leave empty [] to disable.
-rsi_periods = [14, 21, 28]
 
-# 3. MACD (Moving Average Convergence Divergence)
-# List of configurations: [fast_period, slow_period, signal_period]
-# The elastic net will select the best one(s).
-macd_configs = [
-    [12, 26, 9],   # Standard MACD (Most common)
-    [5, 35, 5],    # Fast MACD (More sensitive to recent moves)
-    [19, 39, 9],   # Slow MACD (Smoother, less noise)
-]

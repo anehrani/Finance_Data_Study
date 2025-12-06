@@ -1,32 +1,31 @@
 # try_cd_comb - Combined Indicator Selection using Coordinate Descent
 
-This package extends the `try_cd_ma` (Moving Average Crossover) system by supporting a **combination of multiple indicator types**, including:
-- **Moving Average (MA) Crossovers** - Trend-following indicators
-- **Relative Strength Index (RSI)** - Momentum oscillator
-- **MACD (Moving Average Convergence Divergence)** - Trend and momentum indicator
+This package extends the `try_cd_ma` (Moving Average Crossover) system by supporting a flexible combination of multiple indicator types, including:
+- **Moving Average (MA)** - Simple Moving Average crossovers
+- **Relative Strength Index (RSI)** - Momentum oscillator differences
+- **Exponential Moving Average (EMA)** - EMA crossovers
+- **MACD** - MACD Histogram values
+- **Rate of Change (ROC)** - Momentum indicator differences
 
-The system uses **Elastic Net regularization** via coordinate descent to select the most predictive indicators for trading.
+The system uses **Elastic Net regularization** via coordinate descent to select the most predictive linear combination of these indicators.
 
 ## Overview
 
 The `try_cd_comb` package performs the following:
 
-1. **Generates multiple indicator specifications** based on configuration:
-   - MA crossovers with varying short/long lookback periods
-   - RSI with configurable periods (e.g., 14, 21, 28)
+1. **Generates multiscale indicator specifications**:
+   - Instead of fixed parameters, it generates a grid of indicators based on `n_long` (number of long-term periods), `n_short` (number of short-term periods), and `lookback_inc` (increment).
+   - This applies to ALL enabled indicator types. For example, if you enable MACD, it will generate many MACD indicators with different fast/slow periods derived from the grid.
 
-2. **Computes indicators** for both training and test datasets
+2. **Computes indicators** for both training and test datasets.
 
 3. **Trains a linear model** using coordinate descent with elastic net regularization:
-   - Cross-validation to select optimal lambda (regularization strength)
-   - Sparse coefficient selection (many indicators will have zero weight)
+   - Cross-validation to select optimal lambda (regularization strength).
+   - Sparse coefficient selection (many indicators will have zero weight).
 
-4. **Evaluates out-of-sample performance** on test data
+4. **Evaluates out-of-sample performance** on test data.
 
-5. **Generates detailed reports** showing:
-   - Selected indicators and their coefficients
-   - Cross-validation results
-   - Out-of-sample returns
+5. **Generates detailed reports** showing coefficients for each indicator type.
 
 ## Configuration
 
@@ -35,7 +34,7 @@ The `try_cd_comb` package performs the following:
 Create a configuration file (e.g., `config.toml`):
 
 ```toml
-# Increment to long-term lookback
+# Increment to long-term lookback (e.g., 10 means 10, 20, 30...)
 lookback_inc = 10
 
 # Number of long-term lookbacks to test
@@ -69,8 +68,9 @@ max_iterations = 1000
 # Convergence tolerance
 tolerance = 1e-9
 
-# RSI periods to include (optional)
-rsi_periods = [14, 21, 28]
+# Crossover types to generate
+# Options: "ma", "rsi", "ema", "macd", "roc"
+crossover_types = ["ma", "rsi", "macd"]
 ```
 
 ### Command-Line Arguments
@@ -82,113 +82,56 @@ cargo run -p try_cd_comb -- --config config.toml
 
 Or provide arguments directly:
 ```bash
-cargo run -p try_cd_comb -- 10 20 10 0.5 data/XAGUSD.txt --rsi-periods 14,21,28
+cargo run -p try_cd_comb -- 10 20 10 0.5 data/XAGUSD.txt --crossover-types ma,macd,roc
 ```
 
-Arguments:
-- `LOOKBACK_INC`: Increment to long-term lookback
-- `N_LONG`: Number of long-term lookbacks
-- `N_SHORT`: Number of short-term lookbacks
-- `ALPHA`: Alpha parameter (0-1]
-- `FILENAME`: Market data file
-- `--rsi-periods`: Comma-separated RSI periods (optional)
+### Argument Meanings
+
+- `LOOKBACK_INC`: The step size for generating long-term lookback periods. (e.g., if 10, periods are 10, 20, 30...)
+- `N_LONG`: The number of long-term lookback periods to generate. (Max lookback = `N_LONG` * `LOOKBACK_INC`)
+- `N_SHORT`: The number of short-term lookback periods to generate for each long-term period. Short lookbacks are derived as a fraction of the long lookback to ensures they are always shorter.
+- `ALPHA`: Elastic Net mixing parameter. `1.0` is Lasso (L1 penalty), `0.0` is Ridge (L2 penalty). `0.5` is a mix.
+- `FILENAME`: Path to the input market data file.
+- `--crossover-types`: Comma-separated list of indicator types to include.
+    - `ma`: Simple Moving Average Crossover (`SMA(short) - SMA(long)`)
+    - `rsi`: RSI Crossover (`RSI(short) - RSI(long)`)
+    - `ema`: Exponential Moving Average Crossover (`EMA(short) - EMA(long)`)
+    - `macd`: MACD Histogram (`MACD(fast=short, slow=long, signal=9)`)
+    - `roc`: Rate of Change Crossover (`ROC(short) - ROC(long)`)
 
 ## How It Works
 
-### 1. Indicator Generation
+### Unified Indicator Generation
 
-**MA Crossovers**: For each combination of long and short lookback periods:
-- Short MA - Long MA = crossover signal
-- Positive values suggest uptrend, negative suggest downtrend
+All enabled indicator types are generated using the same grid search logic:
 
-**RSI**: For each specified period:
-- Measures momentum on a 0-100 scale
-- Values > 70 suggest overbought, < 30 suggest oversold
+1. **Long Lookback Loop**: `ilong` ranges from 0 to `n_long`.
+   `long_lookback = (ilong + 1) * lookback_inc`
 
-**MACD**: Uses standard parameters (12, 26, 9):
-- Fast EMA (12) - Slow EMA (26) = MACD line
-- Signal line = EMA(9) of MACD line
-- Histogram = MACD line - Signal line (used as the indicator)
-- Positive histogram suggests bullish momentum, negative suggests bearish
+2. **Short Lookback Loop**: `ishort` ranges from 0 to `n_short`.
+   `short_lookback = long_lookback * (ishort + 1) / (n_short + 1)`
 
-### 2. Model Training
+3. **Indicator Computation**:
+   - **MA/EMA/RSI/ROC**: Computes `Indicator(short) - Indicator(long)`. A positive value usually indicates an uptrend (short > long).
+   - **MACD**: Computes the MACD Histogram where `fast_period = short_lookback`, `slow_period = long_lookback`, and `signal_period` is fixed at 9.
 
-Uses **Elastic Net** regularization:
-```
-minimize: (1/2n) * ||y - Xβ||² + λ[(1-α)/2 * ||β||² + α * ||β||₁]
-```
+This approach creates a vast "feature soup" of indicators at multiple time scales. The Elastic Net model then statistically selects the best combination of these features to predict returns.
 
-Where:
-- `y` = target returns
-- `X` = indicator matrix
-- `β` = coefficients to learn
-- `λ` = regularization strength (selected via CV)
-- `α` = elastic net mixing parameter
+## Example Output
 
-**Cross-validation** selects the optimal `λ` that maximizes out-of-sample explained variance.
-
-### 3. Trading Logic
-
-For each time step:
-1. Compute all indicators
-2. Calculate prediction: `pred = Σ(β_i * indicator_i)`
-3. Trade based on prediction:
-   - If `pred > 0`: Go long (buy)
-   - If `pred < 0`: Go short (sell)
-   - If `pred = 0`: No position
-
-### 4. Evaluation
-
-Reports:
-- **In-sample explained variance**: How well the model fits training data
-- **Out-of-sample return**: Cumulative log return on test data
-- **Selected indicators**: Non-zero coefficients indicate useful indicators
-
-## Output
-
-The program generates a log file (e.g., `CD_COMB.LOG`) containing:
+The program generates a log file (e.g., `CD_COMB.LOG`) containing coefficients for each type:
 
 ```
-CD_MA - Moving Average Crossover Indicator Selection
-============================================================
-
-Configuration:
-  Lookback increment: 10
-  Number of long-term lookbacks: 20
-  Number of short-term lookbacks: 10
-  Alpha: 0.5000
-  Number of indicators: 203
-  Test cases: 252
-
-Cross-Validation Results:
-  Optimal lambda: 0.012345
-
-  Lambda    OOS Explained
-  ---------------------------
-  0.0001         0.1234
-  0.0002         0.1456
-  ...
-
-Beta Coefficients (In-sample explained variance: 45.2%):
-Row: long-term lookback | Columns: short-term lookback (small to large)
-
+MA Crossover Coefficients:
+Row: long-term lookback | Columns: short-term lookback
    10    0.1234    0.0000    ----    ...
    20    ----      0.2345    ----    ...
+
+MACD Crossover Coefficients:
+Row: long-term lookback | Columns: short-term lookback
+   10    0.0567    ----      ----    ...
    ...
-
-RSI Coefficients:
-  Period  14:    0.0567
-  Period  21:      ----
-  Period  28:   -0.0234
-
-MACD Coefficient (Histogram):
-  MACD:    0.0123
-
-Out-of-Sample Results:
-  Total return: 0.12345 (13.145%)
 ```
-
-A detailed backtest report is also generated in `backtest_results.txt` (or similar), containing performance metrics and a full trade log.
 
 ## Data Format
 
@@ -200,47 +143,9 @@ YYYYMMDD Price
 ...
 ```
 
-## Example Usage
-
-```bash
-# Using config file
-cargo run -p try_cd_comb -- --config config.toml
-
-# Using command-line arguments with RSI and MACD
-cargo run -p try_cd_comb -- 10 20 10 0.5 data/XAGUSD.txt --rsi-periods 14,21 --include-macd
-
-# MA only (no RSI, no MACD)
-cargo run -p try_cd_comb -- 10 20 10 0.5 data/XAGUSD.txt
-```
-
 ## Testing
 
 Run tests:
 ```bash
 cargo test -p try_cd_comb
 ```
-
-## Architecture
-
-The package is organized into modules:
-
-- **`config.rs`**: Configuration parsing and validation
-- **`data.rs`**: Market data loading and train/test splitting
-- **`indicators.rs`**: Indicator specification and computation
-- **`training.rs`**: Model training with cross-validation
-- **`evaluation.rs`**: Model evaluation and result reporting
-- **`main.rs`**: Entry point and workflow orchestration
-
-## Future Enhancements
-
-Potential additions:
-- **Bollinger Bands** (volatility indicator)
-- **Stochastic Oscillator** (momentum indicator)
-- **ATR** (Average True Range - volatility)
-- **Volume-based indicators**
-- **Custom MACD parameters** (currently uses standard 12, 26, 9)
-
-## References
-
-- Coordinate Descent: Friedman, J., Hastie, T., & Tibshirani, R. (2010). Regularization Paths for Generalized Linear Models via Coordinate Descent.
-- Elastic Net: Zou, H., & Hastie, T. (2005). Regularization and variable selection via the elastic net.

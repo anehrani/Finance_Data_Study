@@ -2,7 +2,6 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::process::Command;
 use std::fs;
-use regex::Regex;
 use anyhow::{Context, Result};
 
 mod sensitivity;
@@ -49,31 +48,27 @@ fn run_tool(package_name: &str, bin_name: &str, args: &[&str]) -> Result<String>
     Ok(stdout)
 }
 
-use std::io::{BufRead, BufReader, Write};
+
+
+
+use statn::core::io::{read_ohlc_file, write_file};
+use std::fmt::Write as FmtWrite;
 
 fn convert_ohlc_to_price(input_path: &str, output_path: &str) -> Result<()> {
-    let file = fs::File::open(input_path).context("Failed to open input file")?;
-    let reader = BufReader::new(file);
-    let mut out_file = fs::File::create(output_path).context("Failed to create output file")?;
+    println!("Converting OHLC to Price data...");
+    let ohlc = read_ohlc_file(input_path)
+        .map_err(|e| anyhow::anyhow!("Failed to read market file: {}", e))?;
 
-    for line in reader.lines() {
-        let line = line?;
-        if line.trim().is_empty() {
-            continue;
-        }
-        
-        // Assume format: YYYYMMDD Open High Low Close
-        // We want: YYYYMMDD Close
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 5 {
-            let date = parts[0];
-            let close = parts[4]; // 0:date, 1:open, 2:high, 3:low, 4:close
-            writeln!(out_file, "{} {}", date, close)?;
-        } else if parts.len() == 2 {
-             // Already in Price format? Just copy
-             writeln!(out_file, "{} {}", parts[0], parts[1])?;
-        }
+    let mut content = String::new();
+    for i in 0..ohlc.close.len() {
+        let date = ohlc.date[i];
+        // Write log prices directly as requested
+        let price = ohlc.close[i];
+        writeln!(&mut content, "{} {:.6}", date, price)?;
     }
+
+    write_file(output_path, content)?;
+    println!("Price data written to {}", output_path);
     Ok(())
 }
 
@@ -83,7 +78,6 @@ fn main() -> Result<()> {
     // Create output directory
     fs::create_dir_all(&cli.output_dir)?;
 
-    let data_path = cli.data_file.to_str().unwrap();
     let abs_data_path = fs::canonicalize(&cli.data_file)
         .context("Failed to find data file")?
         .to_str()
@@ -91,7 +85,6 @@ fn main() -> Result<()> {
         .to_string();
 
     // Create price-only file
-    let price_file_path = cli.output_dir.join("price_data.txt");
     let abs_price_path = fs::canonicalize(&cli.output_dir)?.join("price_data.txt").to_str().unwrap().to_string();
     convert_ohlc_to_price(&abs_data_path, &abs_price_path)?;
 

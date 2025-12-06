@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     println!("Test cases: {}", split.test_data.len() - split.max_lookback);
     
     // Generate indicator specifications
-    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short, &config.rsi_periods, &config.macd_configs, &config.crossover_types);
+    let specs = generate_specs(config.lookback_inc, config.n_long, config.n_short, &config.crossover_types);
     println!("Number of indicators: {}", specs.len());
     
     // Compute training indicators
@@ -100,6 +100,16 @@ fn main() -> Result<()> {
     // Write backtest results
     let backtest_path = config.output_file.parent().unwrap_or(std::path::Path::new(".")).join("backtest_results.txt");
     write_backtest_results(&backtest_path, &backtest_stats)?;
+
+    // Save the trained model
+    let model_path = config.output_file.parent().unwrap_or(std::path::Path::new(".")).join("model.json");
+    println!("Saving model to {}...", model_path.display());
+    let saved_model = SavedModel::new(
+        training_result.model.clone(), // Clone the model
+        specs.clone(),                 // Clone the specs
+        config.clone()                 // Clone the config
+    );
+    saved_model.save(&model_path)?;
     
     // Print summary
     println!("\nSummary:");

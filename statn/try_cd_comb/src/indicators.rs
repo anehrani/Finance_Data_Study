@@ -17,20 +17,12 @@ pub enum CrossoverType {
     Roc,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IndicatorSpec {
     Crossover {
         type_: CrossoverType,
         short_lookback: usize,
         long_lookback: usize,
-    },
-    Rsi {
-        period: usize,
-    },
-    Macd {
-        fast: usize,
-        slow: usize,
-        signal: usize,
     },
 }
 
@@ -52,8 +44,6 @@ pub fn generate_specs(
     lookback_inc: usize,
     n_long: usize,
     n_short: usize,
-    rsi_periods: &[usize],
-    macd_configs: &[(usize, usize, usize)],
     crossover_types: &[CrossoverType],
 ) -> Vec<IndicatorSpec> {
     let mut specs = Vec::new();
@@ -72,16 +62,6 @@ pub fn generate_specs(
                 });
             }
         }
-    }
-
-    // RSI
-    for &period in rsi_periods {
-        specs.push(IndicatorSpec::Rsi { period });
-    }
-
-    // MACD
-    for &(fast, slow, signal) in macd_configs {
-        specs.push(IndicatorSpec::Macd { fast, slow, signal });
     }
 
     specs
@@ -178,28 +158,6 @@ pub fn compute_all_indicators(
                     }
                 }
             },
-            IndicatorSpec::Rsi { period } => {
-                let full_rsi = rsi(prices, *period);
-                // Extract the relevant slice
-                if start_idx + n_cases > full_rsi.len() {
-                    return Err(anyhow::anyhow!("RSI computation out of bounds"));
-                }
-                full_rsi[start_idx..start_idx + n_cases].to_vec()
-            },
-            IndicatorSpec::Macd { fast, slow, signal } => {
-                // Compute MACD histogram for entire price series
-                let config = MacdConfig {
-                    fast_period: *fast,
-                    slow_period: *slow,
-                    signal_period: *signal,
-                };
-                let full_macd = macd_histogram(prices, config);
-                // Extract the relevant slice
-                if start_idx + n_cases > full_macd.len() {
-                    return Err(anyhow::anyhow!("MACD computation out of bounds"));
-                }
-                full_macd[start_idx..start_idx + n_cases].to_vec()
-            }
         };
         
         for i in 0..n_cases {
@@ -249,11 +207,10 @@ mod tests {
     
     #[test]
     fn test_generate_specs() {
-        // Test with RSI and multiple MACD configs
-        let macd_configs = vec![(12, 26, 9), (5, 35, 5)];
-        let crossover_types = vec![CrossoverType::Ma];
-        let specs = generate_specs(10, 3, 2, &[14], &macd_configs, &crossover_types);
-        assert_eq!(specs.len(), 9); // 3 * 2 + 1 RSI + 2 MACD
+        // Test with Ma and Rsi types
+        let crossover_types = vec![CrossoverType::Ma, CrossoverType::Rsi];
+        let specs = generate_specs(10, 3, 2, &crossover_types);
+        assert_eq!(specs.len(), 12); // (3 * 2) * 2 types = 12
         
         // Check first spec (MA)
         if let IndicatorSpec::Crossover { type_, long_lookback, .. } = &specs[0] {
@@ -262,47 +219,16 @@ mod tests {
         } else {
             panic!("Expected MA crossover");
         }
-        
-        // Check RSI spec
-        if let IndicatorSpec::Rsi { period } = specs[6] {
-            assert_eq!(period, 14);
-        } else {
-            panic!("Expected RSI");
-        }
-        
-        // Check first MACD spec
-        if let IndicatorSpec::Macd { fast, slow, signal } = specs[7] {
-            assert_eq!(fast, 12);
-            assert_eq!(slow, 26);
-            assert_eq!(signal, 9);
-        } else {
-            panic!("Expected MACD");
-        }
-        
-        // Check second MACD spec
-        if let IndicatorSpec::Macd { fast, slow, signal } = specs[8] {
-            assert_eq!(fast, 5);
-            assert_eq!(slow, 35);
-            assert_eq!(signal, 5);
-        } else {
-            panic!("Expected MACD");
-        }
-        
-        // Test without MACD
-        let specs_no_macd = generate_specs(10, 3, 2, &[14], &[], &crossover_types);
-        assert_eq!(specs_no_macd.len(), 7); // 3 * 2 + 1 RSI, no MACD
 
-        // Test with RSI Crossover
-        let crossover_types_rsi = vec![CrossoverType::Rsi];
-        let specs_rsi_cross = generate_specs(10, 3, 2, &[], &[], &crossover_types_rsi);
-        assert_eq!(specs_rsi_cross.len(), 6); // 3 * 2
-        if let IndicatorSpec::Crossover { type_, .. } = &specs_rsi_cross[0] {
+        // Check RSI spec (should start after MA specs)
+        // 3 longs * 2 shorts = 6 MA specs. Index 6 should be RSI.
+        if let IndicatorSpec::Crossover { type_, long_lookback, .. } = &specs[6] {
             assert_eq!(*type_, CrossoverType::Rsi);
+            assert_eq!(*long_lookback, 10);
         } else {
             panic!("Expected RSI crossover");
         }
-    }
-    
+    }  
     #[test]
     fn test_compute_targets() {
         let prices = vec![1.0, 1.1, 1.05, 1.15, 1.2];

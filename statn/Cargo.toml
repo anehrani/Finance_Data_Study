@@ -18,7 +18,7 @@ members = [
     "per_what", "bound_mean", "bootstrap_rate", "conftest", "bnd_ret", "drawdown",
     "montecarlo_permutation_test",
     "src/backtesting",
-    "complete_model_tester",
+    "complete_model_generator",
 ]
 
 [package]
