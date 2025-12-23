@@ -1,4 +1,4 @@
-# STATN - Statistical Testing of Indicators
+# Statistical Testing of Indicators
 
 `statn` is a comprehensive Rust-based toolkit for quantitative traders and researchers. It provides a systematic pipeline for designing, optimizing, and validating trading models based on statistical principles.
 
@@ -18,7 +18,7 @@ The workspace is organized into a modular library and a suite of specialized app
 - [**Statistical Utilities**](statn/docs/statistical_tools.md): Standalone tools for entropy checks, stationarity tests, and Monte Carlo Permutation Tests.
 
 ## Application Summary
-The primary application of `statn` is to eliminate "guessing" in trading strategy design by replacing intuition with a rigorous, math-driven pipeline:
+The primary application of this library is to eliminate "guessing" in trading strategy design by replacing intuition with a rigorous, math-driven pipeline:
 
 1.  **Ensuring Stationarity**: Validating that indicators don't drift and remain mathematically stable over time.
 2.  **Information Content (Entropy)**: Using entropy checks to ensure indicators provide real signal rather than clumped noise.
