@@ -26,3 +26,11 @@ The primary application of this library is to eliminate "guessing" in trading st
 4.  **Robustness Analysis**: Stress-testing parameters via sensitivity analysis and Permutation Tests to ensure performance isn't just a result of market noise (p-hacking).
 
 For a deep dive into the methodology and detailed tool documentation, see the [**Documentation Landing Page**](statn/docs/README.md).
+
+## Contact Me
+
+Stay in touch or reach out for collaboration:
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/ali-nehrani)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/anehrani)
+[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=icloud&logoColor=white)](mailto:ali.nehrani@gmail.com)
