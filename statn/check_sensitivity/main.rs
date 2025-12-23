@@ -49,8 +49,7 @@ fn main() {
     let low_bounds = vec![-5.0, -5.0, -5.0];
     let high_bounds = vec![5.0, 5.0, 5.0];
 
-    match sensitivity(
-        sphere_function,
+    let config = statn::estimators::sensitivity::SensitivityConfig {
         nvars,
         nints,
         20,  // npoints
@@ -73,8 +72,7 @@ fn main() {
     let low_bounds = vec![0.0, 0.0, 0.0];
     let high_bounds = vec![10.0, 10.0, 10.0];
 
-    match sensitivity(
-        quadratic_function,
+    let config = statn::estimators::sensitivity::SensitivityConfig {
         nvars,
         nints,
         15,  // npoints
@@ -97,8 +95,7 @@ fn main() {
     let low_bounds = vec![-2.0, -2.0];
     let high_bounds = vec![3.0, 3.0];
 
-    match sensitivity(
-        rosenbrock_function,
+    let config = statn::estimators::sensitivity::SensitivityConfig {
         nvars,
         nints,
         25,  // npoints

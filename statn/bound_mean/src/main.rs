@@ -147,7 +147,7 @@ fn main() -> Result<()> {
 
     // Crunch the grouped returns
     let crunch = 10;
-    let n_returns_crunched = (nret_grouped + crunch - 1) / crunch;
+    let n_returns_crunched = nret_grouped.div_ceil(crunch);
     for i in 0..n_returns_crunched {
         let mut n = crunch;
         if i * crunch + n > nret_grouped {

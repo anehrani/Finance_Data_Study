@@ -173,9 +173,7 @@ pub fn ibeta(mut p: f64, mut q: f64, x: f64) -> f64 {
     let aleps1 = eps1.ln();
 
     let switched_args = if x > 0.5 {
-        let temp = p;
-        p = q;
-        q = temp;
+        std::mem::swap(&mut p, &mut q);
         true
     } else {
         false
@@ -334,7 +332,7 @@ pub fn inverse_ibeta(p: f64, a: f64, b: f64) -> f64 {
 
 pub fn t_cdf(ndf: i32, t: f64) -> f64 {
     let mut prob = 1.0 - 0.5 * ibeta(0.5 * (ndf as f64), 0.5, (ndf as f64) / ((ndf as f64) + t * t));
-    prob = prob.max(0.0).min(1.0);
+    prob = prob.clamp(0.0, 1.0);
     if t >= 0.0 {
         prob
     } else {
@@ -358,7 +356,7 @@ pub fn inverse_t_cdf(ndf: i32, p: f64) -> f64 {
 
 pub fn f_cdf(ndf1: i32, ndf2: i32, f: f64) -> f64 {
     let mut prob = 1.0 - ibeta(0.5 * (ndf2 as f64), 0.5 * (ndf1 as f64), (ndf2 as f64) / ((ndf2 as f64) + (ndf1 as f64) * f));
-    prob = prob.max(0.0).min(1.0);
+    prob = prob.clamp(0.0, 1.0);
     prob
 }
 
@@ -420,7 +418,7 @@ pub fn ks_cdf(n: i32, dn: f64) -> f64 {
     }
 
     sum = 1.0 - 2.0 * sum;
-    sum = sum.max(0.0).min(1.0);
+    sum = sum.clamp(0.0, 1.0);
     sum
 }
 
@@ -446,19 +444,20 @@ pub fn t_test_one_sample(x: &[f64]) -> f64 {
 // Student's t test for two samples
 // ============================================================================
 
+#[allow(dead_code)]
 fn t_test_two_samples(x1: &[f64], x2: &[f64]) -> f64 {
     let n1 = x1.len() as f64;
     let n2 = x2.len() as f64;
-
     let mean1 = x1.iter().sum::<f64>() / n1;
     let mean2 = x2.iter().sum::<f64>() / n2;
-
-    let ss1: f64 = x1.iter().map(|xi| (xi - mean1).powi(2)).sum();
-    let ss2: f64 = x2.iter().map(|xi| (xi - mean2).powi(2)).sum();
-
-    let std = ((ss1 + ss2) / (n1 + n2 - 2.0) * (1.0 / n1 + 1.0 / n2)).sqrt();
-
-    (mean1 - mean2) / (std + 1e-60)
+    let var1 = x1.iter().map(|x| (x - mean1).powi(2)).sum::<f64>() / (n1 - 1.0);
+    let var2 = x2.iter().map(|x| (x - mean2).powi(2)).sum::<f64>() / (n2 - 1.0);
+    let pooled_var = ((n1 - 1.0) * var1 + (n2 - 1.0) * var2) / (n1 + n2 - 2.0);
+    let se = (pooled_var * (1.0 / n1 + 1.0 / n2)).sqrt();
+    if se.abs() < 1e-10 {
+        return 0.0;
+    }
+    (mean1 - mean2) / se
 }
 
 // ============================================================================
@@ -491,8 +490,8 @@ pub fn u_test(x1: &[f64], x2: &[f64]) -> (f64, f64) {
         let ntied = k - j;
         tie_correc += (ntied as f64).powi(3) - ntied as f64;
         let rank = 0.5 * ((j as f64) + (k as f64) + 1.0);
-        for idx in j..k {
-            ranks[idx] = rank;
+        for rank_val in ranks.iter_mut().take(k).skip(j) {
+            *rank_val = rank;
         }
         j = k;
     }
@@ -542,7 +541,7 @@ pub fn anderson_darling_test(mut x: Vec<f64>) -> f64 {
     let n = x.len();
     x.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
-    let mut z = -1.0 * (n as f64).powi(2);
+    let mut z = -(n as f64).powi(2);
     for i in 0..n {
         let term = x[i] * (1.0 - x[n - i - 1]);
         let term = if term < 1e-30 { 1e-30 } else { term };
@@ -622,8 +621,8 @@ pub fn kruskal_wallis(x: &[f64], group_ids: &[usize], num_groups: usize) -> f64 
         let ntied = k - j;
         tie_correc += (ntied as f64).powi(3) - ntied as f64;
         let rank = 0.5 * ((j as f64) + (k as f64) + 1.0);
-        for idx in j..k {
-            ranks[idx] = rank;
+        for rank_val in ranks.iter_mut().take(k).skip(j) {
+            *rank_val = rank;
         }
         j = k;
     }
@@ -729,8 +728,8 @@ pub fn nominal_lambda(data: &[Vec<i32>]) -> (f64, f64, f64) {
     for j in 0..ncols {
         let mut col_cell_max = 0;
         let mut col_total = 0;
-        for i in 0..nrows {
-            let val = data[i][j];
+        for row in data.iter().take(nrows) {
+            let val = row[j];
             col_cell_max = col_cell_max.max(val);
             col_total += val;
         }
@@ -928,8 +927,8 @@ pub fn quantile_conf(n: i32, m: i32, conf: f64) -> f64 {
     }
 
     // Ridder's method
-    let mut x2 = 0.0;
-    let mut y2 = 0.0;
+    let mut x2 = 0.5 * (x1 + x3); // Initialize with midpoint
+    let mut y2;
 
     for _iter in 0..200 {
         x2 = 0.5 * (x1 + x3);
@@ -1050,11 +1049,15 @@ impl OnlineStats {
 
     pub fn update(&mut self, y: &[f64]) {
         if self.n == 0 {
-            for i in 0..y.len() {
-                self.mean[i] = y[i];
-                self.sum2[i] = 0.0;
-                self.sum3[i] = 0.0;
-                self.sum4[i] = 0.0;
+            for (&y_val, (mean_val, (sum2_val, (sum3_val, sum4_val)))) in y.iter()
+                .zip(self.mean.iter_mut()
+                    .zip(self.sum2.iter_mut()
+                        .zip(self.sum3.iter_mut()
+                            .zip(self.sum4.iter_mut())))) {
+                *mean_val = y_val;
+                *sum2_val = 0.0;
+                *sum3_val = 0.0;
+                *sum4_val = 0.0;
             }
             self.n = 1;
             return;
@@ -1062,18 +1065,23 @@ impl OnlineStats {
 
         let np1 = (self.n + 1) as f64;
 
-        for i in 0..y.len() {
-            self.delta[i] = y[i] - self.mean[i];
-            self.mean[i] += self.delta[i] / np1;
-            let dsquare = self.delta[i] * self.delta[i];
+        for (&y_val, (delta_val, (mean_val, (sum2_val, (sum3_val, sum4_val))))) in y.iter()
+            .zip(self.delta.iter_mut()
+                .zip(self.mean.iter_mut()
+                    .zip(self.sum2.iter_mut()
+                        .zip(self.sum3.iter_mut()
+                            .zip(self.sum4.iter_mut()))))) {
+            *delta_val = y_val - *mean_val;
+            *mean_val += *delta_val / np1;
+            let dsquare = *delta_val * *delta_val;
 
             let n_f = self.n as f64;
-            self.sum4[i] += n_f * (n_f * n_f - n_f + 1.0) * dsquare * dsquare / (np1 * np1 * np1);
-            self.sum4[i] += 6.0 * self.sum2[i] * dsquare / (np1 * np1);
-            self.sum4[i] -= 4.0 * self.sum3[i] * self.delta[i] / np1;
-            self.sum3[i] += n_f * (n_f - 1.0) * dsquare * self.delta[i] / (np1 * np1);
-            self.sum3[i] -= 3.0 * self.sum2[i] * self.delta[i] / np1;
-            self.sum2[i] += n_f * dsquare / np1;
+            *sum4_val += n_f * (n_f * n_f - n_f + 1.0) * dsquare * dsquare / (np1 * np1 * np1);
+            *sum4_val += 6.0 * *sum2_val * dsquare / (np1 * np1);
+            *sum4_val -= 4.0 * *sum3_val * *delta_val / np1;
+            *sum3_val += n_f * (n_f - 1.0) * dsquare * *delta_val / (np1 * np1);
+            *sum3_val -= 3.0 * *sum2_val * *delta_val / np1;
+            *sum2_val += n_f * dsquare / np1;
         }
 
         self.n += 1;

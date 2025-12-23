@@ -1,7 +1,6 @@
 /// MWC256 random number generator
 /// This is a random int generator suggested by Marsaglia in his DIEHARD suite.
 /// It provides a great combination of speed and quality.
-
 pub struct Mwc256 {
     q: [u32; 256],
     carry: u32,
@@ -19,9 +18,9 @@ impl Mwc256 {
         let mut q = [0u32; 256];
         let mut j = seed;
         
-        for k in 0..256 {
+        for q_val in &mut q {
             j = j.wrapping_mul(69069).wrapping_add(12345);
-            q[k] = j;
+            *q_val = j;
         }
         
         Self {

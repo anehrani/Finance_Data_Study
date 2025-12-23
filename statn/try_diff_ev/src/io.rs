@@ -46,11 +46,10 @@ pub fn load_market_data<P: AsRef<Path>>(
         let parts: Vec<&str> = line.split_whitespace().collect();
         if parts.len() >= 2 {
             // Take the last column as the close price
-            if let Ok(price) = parts[parts.len() - 1].parse::<f64>() {
-                if price > 0.0 {
+            if let Ok(price) = parts[parts.len() - 1].parse::<f64>()
+                && price > 0.0 {
                     prices.push(price.ln()); // Store in log space
                 }
-            }
         }
     }
     

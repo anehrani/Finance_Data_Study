@@ -34,3 +34,10 @@ max_iterations = 1000
 
 # Convergence tolerance
 tolerance = 1e-9
+
+# Enable RSI oscillation indicators (default: false)
+enable_rsi = true
+
+# RSI periods to test (common values: 7, 14, 21, 28)
+# Default is [14] if not specified
+rsi_periods = [7, 14, 21, 28]

@@ -27,7 +27,7 @@ pub fn read_market_prices(filename: &str) -> Result<Vec<f64>> {
 
         // Parse price
         // Find the start of the price (skip date and delimiters)
-        let price_str = line[8..].trim_start_matches(|c| c == ' ' || c == '\t' || c == ',');
+        let price_str = line[8..].trim_start_matches([' ', '\t', ',']);
         
         if let Ok(price) = price_str.parse::<f64>() {
             if price > 0.0 {

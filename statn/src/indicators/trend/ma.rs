@@ -33,6 +33,45 @@ pub fn moving_average(data: &[f64], lags: usize) -> Vec<f64> {
     sma
 }
 
+/// Calculates the Exponential Moving Average (EMA) for a given data slice and number of lags.
+///
+/// # Arguments
+///
+/// * `data` - A slice of f64 values.
+/// * `lags` - The window size for the moving average.
+///
+/// # Returns
+///
+/// A Vec<f64> containing the EMA values. The first `lags - 1` values are NaN.
+/// The first valid value (at index `lags - 1`) is initialized with the SMA.
+pub fn exponential_moving_average(data: &[f64], lags: usize) -> Vec<f64> {
+    if lags == 0 || lags > data.len() {
+        return vec![f64::NAN; data.len()];
+    }
+
+    let mut ema = Vec::with_capacity(data.len());
+    
+    // Pad with NaN for the initial period
+    for _ in 0..lags - 1 {
+        ema.push(f64::NAN);
+    }
+
+    // Initialize first EMA with SMA
+    let sum: f64 = data.iter().take(lags).sum();
+    let mut current_ema = sum / lags as f64;
+    ema.push(current_ema);
+
+    // Multiplier: 2 / (N + 1)
+    let k = 2.0 / (lags as f64 + 1.0);
+
+    for &price in data.iter().skip(lags) {
+        current_ema = (price - current_ema) * k + current_ema;
+        ema.push(current_ema);
+    }
+
+    ema
+}
+
 pub fn compute_trend(
     closes: &[f64],
     lookback: usize,
@@ -65,7 +104,7 @@ pub fn compute_indicators(
 ) -> Vec<f64> {
     let mut inds = vec![0.0; nind];
     
-    for i in 0..nind {
+    for (i, ind_val) in inds.iter_mut().enumerate().take(nind) {
         let k = start_idx + i;
         
         // Compute short-term mean
@@ -82,7 +121,7 @@ pub fn compute_indicators(
         }
         long_mean /= long_term as f64;
         
-        inds[i] = short_mean - long_mean;
+        *ind_val = short_mean - long_mean;
     }
     
     inds

@@ -8,7 +8,7 @@
 ///
 /// # Arguments
 /// * `data` - Ncases (rows) by nparams+1, where each row contains parameters
-///            followed by the function value
+///   followed by the function value
 /// * `nparams` - Number of parameters
 ///
 /// # Returns
@@ -51,14 +51,14 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
     let mut distances: Vec<f64> = vec![0.0; ncases];
     let mut indices: Vec<usize> = (0..ncases).collect();
 
-    for i in 0..ncases {
+    for (i, dist_val) in distances.iter_mut().enumerate().take(ncases) {
         let ind = i * (nparams + 1);
         let mut sum = 0.0;
         for j in 0..nparams {
             let diff = data[ind + j] - best[j];
             sum += diff * diff;
         }
-        distances[i] = sum;
+        *dist_val = sum;
     }
 
     // Sort by distance
@@ -116,7 +116,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
         let mut line = format!("{:11.3e} :", coefs[coef_idx]);
         coef_idx += 1;
 
-        for k in j..nparams {
+        for _k in j..nparams {
             line.push_str(&format!(" {:11.3e}", coefs[coef_idx]));
             coef_idx += 1;
         }
@@ -192,8 +192,8 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
     .map_err(|e| format!("Write error: {}", e))?;
 
     let mut line = String::new();
-    for j in 0..nparams {
-        line.push_str(&format!(" {:11.3e}", evals[j]));
+    for &eval in evals.iter().take(nparams) {
+        line.push_str(&format!(" {:11.3e}", eval));
     }
     writeln!(buffer, "{}", line).map_err(|e| format!("Write error: {}", e))?;
 
@@ -308,7 +308,7 @@ pub fn paramcor(data: &[f64], nparams: usize) -> Result<String, String> {
 
             if d * d2 > 0.0 {
                 let mut corr = hessian_inv[i * nparams + k] / (d * d2);
-                corr = corr.max(-1.0).min(1.0);
+                corr = corr.clamp(-1.0, 1.0);
                 line.push_str(&format!(" {:12.3}", corr));
             } else {
                 line.push_str("        -----");
@@ -456,13 +456,9 @@ pub fn gauss_elimination(a: &[f64], b: &[f64], n: usize) -> Result<Vec<f64>, Str
         // Swap rows
         if max_row != col {
             for j in 0..n {
-                let temp = a[col * n + j];
-                a[col * n + j] = a[max_row * n + j];
-                a[max_row * n + j] = temp;
+                a.swap(col * n + j, max_row * n + j);
             }
-            let temp = b[col];
-            b[col] = b[max_row];
-            b[max_row] = temp;
+            b.swap(col, max_row);
         }
 
         if a[col * n + col].abs() < 1e-15 {

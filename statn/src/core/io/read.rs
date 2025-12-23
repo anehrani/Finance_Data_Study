@@ -47,7 +47,7 @@ pub fn read_market_file(filename: &str) -> Result<BarData, String> {
         }
     }
 
-    if bars.len() == 0 {
+    if bars.is_empty() {
         return Err("No data read from file".to_string());
     }
 

@@ -78,7 +78,7 @@ where
     if z0_count >= nboot {
         z0_count = nboot - 1;
     }
-    if z0_count <= 0 {
+    if z0_count == 0 {
         z0_count = 1;
     }
 
