@@ -22,14 +22,23 @@ pub struct CoordinateDescent {
     ncases: usize,
     covar_updates: bool,
     n_lambda: usize,
+    #[serde(skip, default)]
     lambda_beta: Vec<f64>,
+    #[serde(skip, default)]
     lambdas: Vec<f64>,
+    #[serde(skip, default)]
     x: Vec<f64>,
+    #[serde(skip, default)]
     y: Vec<f64>,
+    #[serde(skip, default)]
     w: Option<Vec<f64>>,
+    #[serde(skip, default)]
     resid: Vec<f64>,
+    #[serde(skip, default)]
     xinner: Option<Vec<f64>>,
+    #[serde(skip, default)]
     yinner: Option<Vec<f64>>,
+    #[serde(skip, default)]
     xssvec: Option<Vec<f64>>,
 }
 

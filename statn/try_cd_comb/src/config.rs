@@ -18,8 +18,6 @@ pub struct Config {
     /// Crossover types to generate (e.g., ["ma", "rsi"])
     #[serde(default = "default_crossover_types")]
     pub crossover_types: Vec<crate::indicators::CrossoverType>,
-
-
     
     /// Alpha parameter for elastic net (0-1]
     pub alpha: f64,
@@ -77,13 +75,13 @@ fn default_tolerance() -> f64 {
 }
 
 fn default_crossover_types() -> Vec<crate::indicators::CrossoverType> {
-    vec![crate::indicators::CrossoverType::Ma]
+    vec![crate::indicators::CrossoverType::Ma, crate::indicators::CrossoverType::Rsi, crate::indicators::CrossoverType::Macd ]
 }
 
 /// Command-line arguments
 #[derive(Parser, Debug)]
-#[command(name = "try_cd_ma")]
-#[command(about = "Moving Average Crossover Indicator Selection using Coordinate Descent")]
+#[command(name = "try_cd_comb")]
+#[command(about = "Indicator Selection using Coordinate Descent")]
 pub struct Args {
     /// Path to TOML configuration file
     #[arg(short, long)]

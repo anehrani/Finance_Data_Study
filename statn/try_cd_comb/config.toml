@@ -2,7 +2,7 @@
 
 # --- Data Settings ---
 # Path to your market data file (relative to where you run the command)
-data_file = "../../data/XAGUSD.txt"
+data_file = "../../data/historical_data/QQQ.txt"
 
 # Output file for logs and results
 output_file = "results/CD_MA_config_run.log"
@@ -12,7 +12,7 @@ output_file = "results/CD_MA_config_run.log"
 n_test = 252  # Approx 1 year of daily data
 
 # Elastic Net Regularization
-alpha = 0.05          # Mix between L1 (Lasso) and L2 (Ridge). 0.5 is a good balance.
+alpha = 0.5          # Mix between L1 (Lasso) and L2 (Ridge). 0.5 is a good balance.
 n_folds = 10         # Number of cross-validation folds
 n_lambdas = 100      # Number of lambda values to test
 max_iterations = 10000
@@ -29,6 +29,6 @@ n_short = 3         # Number of short-term lookbacks (10, 20, ..., 100)
 # Crossover types to generate
 # Crossover types to generate
 # Options: "ma", "rsi", "ema", "macd", "roc"
-crossover_types = ["ma", "rsi", "macd"]
+crossover_types = ["ma", "rsi"]
 
 

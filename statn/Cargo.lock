@@ -622,9 +622,12 @@ dependencies = [
 name = "indicators"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "finance_tools",
  "matlib",
  "rand",
+ "serde",
+ "stats",
 ]
 
 [[package]]
