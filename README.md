@@ -1,4 +1,4 @@
-# STATN - Statistical Trading Network
+# STATN - Statistical Tests of Indicators
 
 `statn` is a comprehensive Rust-based toolkit for quantitative traders and researchers. It provides a systematic pipeline for designing, optimizing, and validating trading models based on statistical principles.
 
